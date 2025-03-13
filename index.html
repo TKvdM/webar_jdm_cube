@@ -6,19 +6,16 @@
   </head>
   <body style="margin: 0; overflow: hidden;">
     <a-scene embedded arjs>
-      <!-- Marker (Put this QR code on your cube) -->
+      <!-- AR marker that will trigger the 3D model -->
       <a-marker preset="hiro">
-        <!-- Load a 3D model (Replace with a JDM car like an RX-7, Supra, or Skyline) -->
-        <a-entity
-          gltf-model="https://raw.githubusercontent.com/TKvdM/webar_jdm_cube/refs/heads/main/scene.glb"
+        <a-entity 
+          gltf-model="https://cdn.jsdelivr.net/gh/TKvdM/webar_jdm_cube@main/scene.glb"
           position="0 0 0"
           rotation="0 180 0"
           scale="0.5 0.5 0.5"
         ></a-entity>
       </a-marker>
-
       <a-camera position="0 0 5"></a-camera>
     </a-scene>
   </body>
 </html>
-
