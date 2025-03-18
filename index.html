@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AR Drifting Car with Floor Positioning</title>
+  <title>AR Drifting Car - Racing Game Style</title>
   <!-- Load A-Frame and AR.js -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
@@ -111,100 +111,254 @@
             this.markerVisible = isVisible;
             document.getElementById('marker-status').textContent = isVisible ? "Visible" : "Hidden";
             document.getElementById('marker-status').style.color = isVisible ? "green" : "red";
+            
+            // If marker becomes visible, trigger the drift animation
+            if (isVisible) {
+              const driftComponent = this.el.components['racing-drift'];
+              if (driftComponent) {
+                driftComponent.startDriftAnimation();
+              }
+            }
           }
         }
       }
     });
     
-    // Drifting car component
-    AFRAME.registerComponent('car-drift', {
+    // Racing-style drift animation component
+    AFRAME.registerComponent('racing-drift', {
       schema: {
-        speed: {type: 'number', default: 0.05},
-        driftRadius: {type: 'number', default: 0.5},
-        driftIntensity: {type: 'number', default: 20},
-        clockwise: {type: 'boolean', default: true}
+        // Animation settings
+        entranceSpeed: {type: 'number', default: 0.03},
+        driftIntensity: {type: 'number', default: 25},
+        smokeDuration: {type: 'number', default: 2000}, // ms
+        repeatDelay: {type: 'number', default: 1000}, // ms between animations
+        autoRepeat: {type: 'boolean', default: true}
       },
       
       init: function() {
-        this.time = 0;
-        this.originPosition = new THREE.Vector3(0, 0, 0);
-        this.carDirection = new THREE.Vector3(0, 0, -1);
-        this.drifting = false;
+        // Setup animation state
+        this.isAnimating = false;
+        this.animationPhase = 'idle'; // idle, entrance, drift, finish
+        this.progress = 0;
+        this.startTime = 0;
+        this.startPos = {x: -2, y: 0, z: -1}; // Off-screen starting position
+        this.targetPos = {x: 0, y: 0, z: 0}; // Final position at marker
         this.driftAngle = 0;
+        this.tireSmoke = [];
         
-        // Drift control checkbox event
-        document.getElementById('toggle-drift').addEventListener('change', (e) => {
-          this.drifting = e.target.checked;
-          document.getElementById('drift-status').textContent = this.drifting ? "Active" : "Disabled";
-          
-          // Reset position when toggling drift off
-          if (!this.drifting) {
-            this.el.setAttribute('position', {x: 0, y: 0, z: 0});
-          }
+        // Get marker reference from parent component
+        this.marker = this.el.closest('a-marker');
+        
+        // Setup control panel
+        document.getElementById('trigger-drift').addEventListener('click', () => {
+          this.startDriftAnimation();
         });
         
-        // Direction toggle
-        document.getElementById('toggle-direction').addEventListener('change', (e) => {
-          this.data.clockwise = e.target.checked;
+        document.getElementById('toggle-auto').addEventListener('change', (e) => {
+          this.data.autoRepeat = e.target.checked;
         });
         
-        // Speed slider
-        document.getElementById('drift-speed').addEventListener('input', (e) => {
-          this.data.speed = parseFloat(e.target.value);
-          document.getElementById('speed-value').textContent = this.data.speed.toFixed(2);
+        document.getElementById('entrance-speed').addEventListener('input', (e) => {
+          this.data.entranceSpeed = parseFloat(e.target.value);
+          document.getElementById('speed-value').textContent = this.data.entranceSpeed.toFixed(2);
         });
         
-        // Radius slider
-        document.getElementById('drift-radius').addEventListener('input', (e) => {
-          this.data.driftRadius = parseFloat(e.target.value);
-          document.getElementById('radius-value').textContent = this.data.driftRadius.toFixed(2);
-        });
-        
-        // Drift intensity slider
         document.getElementById('drift-intensity').addEventListener('input', (e) => {
           this.data.driftIntensity = parseFloat(e.target.value);
           document.getElementById('intensity-value').textContent = this.data.driftIntensity.toFixed(0);
         });
+        
+        // Create tire smoke particles
+        this.createTireSmoke();
+      },
+      
+      createTireSmoke: function() {
+        // Add tire smoke entities
+        const smokeParent = document.createElement('a-entity');
+        smokeParent.setAttribute('position', '0 0 0');
+        this.el.appendChild(smokeParent);
+        this.smokeParent = smokeParent;
+        
+        // Create individual smoke particles
+        for (let i = 0; i < 6; i++) {
+          const smoke = document.createElement('a-entity');
+          smoke.setAttribute('geometry', {
+            primitive: 'plane',
+            width: 0.1,
+            height: 0.1
+          });
+          smoke.setAttribute('material', {
+            color: '#ffffff',
+            opacity: 0.7,
+            transparent: true
+          });
+          smoke.setAttribute('visible', false);
+          smokeParent.appendChild(smoke);
+          this.tireSmoke.push(smoke);
+        }
+      },
+      
+      showTireSmoke: function(show) {
+        // Show/hide and position smoke particles at the rear wheels
+        const isVisible = show && this.animationPhase === 'drift';
+        this.tireSmoke.forEach((smoke, index) => {
+          if (isVisible) {
+            // Position smoke behind car based on index
+            const xOffset = (index % 2 === 0) ? -0.1 : 0.1; // Left or right wheel
+            const zOffset = -0.2 - (Math.floor(index / 2) * 0.05); // Behind car, staggered
+            
+            // Random slight offsets for more natural look
+            const randomX = (Math.random() - 0.5) * 0.05;
+            const randomZ = (Math.random() - 0.5) * 0.05;
+            
+            smoke.setAttribute('position', {
+              x: xOffset + randomX,
+              y: 0.02, // Slightly above ground
+              z: zOffset + randomZ
+            });
+            
+            // Random rotation for variety
+            smoke.setAttribute('rotation', {
+              x: -90, // Flat on ground
+              y: Math.random() * 360,
+              z: 0
+            });
+            
+            // Size variation
+            const scale = 0.1 + (Math.random() * 0.15);
+            smoke.setAttribute('scale', {x: scale, y: scale, z: scale});
+            
+            smoke.setAttribute('visible', true);
+          } else {
+            smoke.setAttribute('visible', false);
+          }
+        });
+      },
+      
+      startDriftAnimation: function() {
+        if (this.isAnimating) return; // Don't restart if already animating
+        
+        this.isAnimating = true;
+        this.animationPhase = 'entrance';
+        this.progress = 0;
+        this.startTime = performance.now();
+        
+        // Reset car position to starting point
+        this.el.setAttribute('position', this.startPos);
+        
+        // Set initial car rotation (facing forward with slight drift angle)
+        const currentRotation = this.el.getAttribute('rotation');
+        this.el.setAttribute('rotation', {
+          x: currentRotation.x,
+          y: -30, // Car is initially turning into the drift
+          z: currentRotation.z
+        });
+        
+        document.getElementById('animation-status').textContent = "Entrance";
+        
+        console.log("Starting drift animation");
       },
       
       tick: function(time, deltaTime) {
-        if (!this.drifting) return;
+        // Skip if not animating or marker not visible
+        if (!this.isAnimating || (this.marker && !this.marker.object3D.visible)) return;
         
-        // Calculate new position along circular path
-        this.time += deltaTime * 0.001 * this.data.speed;
+        const now = performance.now();
+        const elapsedTime = now - this.startTime;
         
-        // Direction multiplier (1 for clockwise, -1 for counter-clockwise)
-        const directionMultiplier = this.data.clockwise ? 1 : -1;
-        
-        // Calculate position on circular path
-        const radius = this.data.driftRadius;
-        const x = Math.cos(this.time * directionMultiplier) * radius;
-        const z = Math.sin(this.time * directionMultiplier) * radius;
-        
-        // Set new position
-        this.el.setAttribute('position', {x: x, y: 0, z: z});
-        
-        // Calculate car direction (tangent to circle)
-        const targetRotationY = (Math.atan2(x, z) * (180/Math.PI) + 180) % 360;
-        
-        // Add drift angle offset based on speed and intensity
-        const driftAngle = directionMultiplier * this.data.speed * this.data.driftIntensity;
-        
-        // Get current rotation values
-        const currentRotation = this.el.getAttribute('rotation');
-        
-        // Set new rotation - keep X and Z from floor-align component
-        this.el.setAttribute('rotation', {
-          x: currentRotation.x,
-          y: targetRotationY + driftAngle,
-          z: currentRotation.z 
-        });
-        
-        // Update debug info
-        document.getElementById('car-position').textContent = 
-          `X: ${x.toFixed(2)}, Y: 0, Z: ${z.toFixed(2)}`;
-        document.getElementById('car-direction').textContent = 
-          `Heading: ${Math.round(targetRotationY)}°, Drift: ${Math.round(driftAngle)}°`;
+        // Update animation based on current phase
+        switch (this.animationPhase) {
+          case 'entrance':
+            // Move car from off-screen towards marker in a curve
+            this.progress += this.data.entranceSpeed * (deltaTime / 16.67); // Normalize to ~60fps
+            
+            if (this.progress >= 1) {
+              this.progress = 1;
+              this.animationPhase = 'drift';
+              this.startTime = now; // Reset timer for drift phase
+              document.getElementById('animation-status').textContent = "Drifting";
+            }
+            
+            // Use curves for a more dynamic entrance
+            const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            const p = easeInOutCubic(this.progress);
+            
+            // Calculate position along a curved path
+            const x = this.startPos.x + (this.targetPos.x - this.startPos.x) * p;
+            const z = this.startPos.z + (this.targetPos.z - this.startPos.z) * p;
+            
+            // Add a curve to the path (car comes in from side in an arc)
+            const curveOffset = Math.sin(p * Math.PI) * 0.5;
+            
+            this.el.setAttribute('position', {
+              x: x + curveOffset,
+              y: 0,
+              z: z
+            });
+            
+            // Calculate car direction and drift angle
+            // Drift angle starts high and decreases as car approaches target
+            const entranceDriftAngle = this.data.driftIntensity * (1 - p);
+            const targetRotationY = -30 + (30 * p); // From initial -30° to 0°
+            
+            // Apply rotation
+            const currentRotation = this.el.getAttribute('rotation');
+            this.el.setAttribute('rotation', {
+              x: currentRotation.x,
+              y: targetRotationY + entranceDriftAngle,
+              z: currentRotation.z
+            });
+            
+            // Update debug
+            document.getElementById('car-position').textContent = 
+              `X: ${x.toFixed(2)}, Y: 0, Z: ${z.toFixed(2)}`;
+            document.getElementById('car-direction').textContent = 
+              `Heading: ${Math.round(targetRotationY)}°, Drift: ${Math.round(entranceDriftAngle)}°`;
+            break;
+            
+          case 'drift':
+            // Hold drift position and show tire smoke
+            this.showTireSmoke(true);
+            
+            // Gradual straightening of the car
+            const driftPhaseProgress = Math.min(1, elapsedTime / this.data.smokeDuration);
+            const targetStraightRotationY = 0; // Final straightened position
+            const currentDriftAngle = this.data.driftIntensity * (1 - driftPhaseProgress);
+            
+            // Apply rotation while straightening
+            const driftRotation = this.el.getAttribute('rotation');
+            this.el.setAttribute('rotation', {
+              x: driftRotation.x,
+              y: targetStraightRotationY + currentDriftAngle,
+              z: driftRotation.z
+            });
+            
+            // Update debug
+            document.getElementById('car-direction').textContent = 
+              `Heading: ${Math.round(targetStraightRotationY)}°, Drift: ${Math.round(currentDriftAngle)}°`;
+            
+            // End drift phase after set duration
+            if (elapsedTime >= this.data.smokeDuration) {
+              this.animationPhase = 'finish';
+              this.showTireSmoke(false);
+              document.getElementById('animation-status').textContent = "Finished";
+              this.startTime = now; // Reset timer for finish delay
+            }
+            break;
+            
+          case 'finish':
+            // Wait for a delay and then possibly restart
+            if (elapsedTime >= this.data.repeatDelay) {
+              if (this.data.autoRepeat) {
+                this.startDriftAnimation(); // Restart animation
+              } else {
+                this.isAnimating = false;
+                this.animationPhase = 'idle';
+                document.getElementById('animation-status').textContent = "Idle";
+              }
+            }
+            break;
+        }
       }
     });
   </script>
@@ -300,6 +454,20 @@
       width: 40px;
       text-align: right;
     }
+    
+    button {
+      background: #336699;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      margin-top: 5px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background: #4477aa;
+    }
   </style>
 </head>
 <body style="margin: 0; overflow: hidden;">
@@ -319,13 +487,13 @@
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
     <!-- Standard Hiro Marker -->
     <a-marker preset="hiro">
-      <!-- Car model with floor alignment and drift behavior -->
+      <!-- Car model with floor alignment and racing drift behavior -->
       <a-entity
         gltf-model="./scene.glb"
         position="0 0 0"
         scale="0.5 0.5 0.5"
         floor-align
-        car-drift>
+        racing-drift>
       </a-entity>
     </a-marker>
     
@@ -335,37 +503,31 @@
   
   <!-- Drift Controls -->
   <div id="drift-controls">
-    <p><strong>Drift Controls</strong></p>
+    <p><strong>Racing Drift Controls</strong></p>
     <div>
-      <input type="checkbox" id="toggle-drift">
-      <label for="toggle-drift">Enable Drift</label>
-      <span> - Status: <span id="drift-status">Disabled</span></span>
+      <button id="trigger-drift">Trigger Drift Animation</button>
+      <div>Status: <span id="animation-status">Idle</span></div>
     </div>
     
-    <div>
-      <input type="checkbox" id="toggle-direction" checked>
-      <label for="toggle-direction">Clockwise Drift</label>
-    </div>
-    
-    <div class="slider-container">
-      <label for="drift-speed">Speed: <span id="speed-value">0.05</span></label>
-      <input type="range" id="drift-speed" min="0.01" max="0.2" step="0.01" value="0.05">
+    <div style="margin-top: 10px;">
+      <input type="checkbox" id="toggle-auto" checked>
+      <label for="toggle-auto">Auto-repeat animation</label>
     </div>
     
     <div class="slider-container">
-      <label for="drift-radius">Radius: <span id="radius-value">0.5</span></label>
-      <input type="range" id="drift-radius" min="0.1" max="2" step="0.1" value="0.5">
+      <label for="entrance-speed">Speed: <span id="speed-value">0.03</span></label>
+      <input type="range" id="entrance-speed" min="0.01" max="0.1" step="0.01" value="0.03">
     </div>
     
     <div class="slider-container">
-      <label for="drift-intensity">Drift Angle: <span id="intensity-value">20</span>°</label>
-      <input type="range" id="drift-intensity" min="0" max="45" value="20">
+      <label for="drift-intensity">Drift Angle: <span id="intensity-value">25</span>°</label>
+      <input type="range" id="drift-intensity" min="0" max="45" value="25">
     </div>
   </div>
   
   <!-- Debug information -->
   <div id="debug-info">
-    <p>AR Drifting Car</p>
+    <p>AR Racing Drift</p>
     <p id="debug-message">Waiting for marker...</p>
     
     <div class="debug-heading">Marker:</div>
