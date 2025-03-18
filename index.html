@@ -23,12 +23,12 @@
       });
     };
     
-    // Register custom drifting component
+    // Register custom drifting component for ground-level car
     AFRAME.registerComponent('car-drift', {
       init: function() {
         this.el.setAttribute('animation', {
           property: 'rotation',
-          dur: 5000,
+          dur: 8000,
           from: '0 0 0',
           to: '0 360 0',
           loop: true,
@@ -99,6 +99,19 @@
       text-align: center;
       z-index: 1000;
     }
+    
+    #adjust-button {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      background: rgba(0,0,120,0.8);
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      font-family: Arial, sans-serif;
+      z-index: 999;
+    }
   </style>
 </head>
 <body style="margin: 0; overflow: hidden;">
@@ -118,10 +131,19 @@
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
     <!-- Standard Hiro Marker -->
     <a-marker preset="hiro">
+      <!-- Ground plane to help with alignment (optional) -->
+      <a-plane position="0 0 0" 
+               rotation="-90 0 0" 
+               width="2" 
+               height="2" 
+               color="#7BC8A4" 
+               opacity="0.5"></a-plane>
+               
+      <!-- Car model - positioned flat on ground -->
       <a-entity
         gltf-model="./scene.glb"
-        position="0 0.1 0"
-        rotation="0 0 0"
+        position="0 0 0"
+        rotation="-90 0 0" 
         scale="0.5 0.5 0.5"
         car-drift
         model-loaded-log>
@@ -137,5 +159,65 @@
     <p>AR Car Test</p>
     <p id="debug-message">Waiting for marker...</p>
   </div>
+  
+  <!-- Position adjustment buttons -->
+  <button id="adjust-button" onclick="toggleAdjustmentControls()">Adjust Position</button>
+  
+  <div id="adjustment-controls" style="position: fixed; bottom: 120px; right: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; z-index: 999; display: none;">
+    <div>
+      <button onclick="adjustCar('rotX', -5)">Rotate X -</button>
+      <button onclick="adjustCar('rotX', 5)">Rotate X +</button>
+    </div>
+    <div style="margin-top: 5px;">
+      <button onclick="adjustCar('posY', -0.05)">Lower</button>
+      <button onclick="adjustCar('posY', 0.05)">Raise</button>
+    </div>
+    <div style="margin-top: 5px;">
+      <button onclick="adjustCar('scale', -0.05)">Smaller</button>
+      <button onclick="adjustCar('scale', 0.05)">Larger</button>
+    </div>
+  </div>
+  
+  <script>
+    function toggleAdjustmentControls() {
+      const controls = document.getElementById('adjustment-controls');
+      controls.style.display = controls.style.display === 'none' ? 'block' : 'none';
+    }
+    
+    function adjustCar(property, value) {
+      const car = document.querySelector('a-entity[gltf-model]');
+      
+      if (property === 'rotX') {
+        const currentRotation = car.getAttribute('rotation');
+        car.setAttribute('rotation', {
+          x: currentRotation.x + value,
+          y: currentRotation.y,
+          z: currentRotation.z
+        });
+        console.log(`Rotation X: ${currentRotation.x + value}`);
+      }
+      
+      if (property === 'posY') {
+        const currentPosition = car.getAttribute('position');
+        car.setAttribute('position', {
+          x: currentPosition.x,
+          y: currentPosition.y + value,
+          z: currentPosition.z
+        });
+        console.log(`Position Y: ${currentPosition.y + value}`);
+      }
+      
+      if (property === 'scale') {
+        const currentScale = car.getAttribute('scale');
+        const newScale = Math.max(0.1, currentScale.x + value);
+        car.setAttribute('scale', {
+          x: newScale,
+          y: newScale,
+          z: newScale
+        });
+        console.log(`Scale: ${newScale}`);
+      }
+    }
+  </script>
 </body>
 </html>
