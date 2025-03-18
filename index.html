@@ -1,24 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AR.js + A-Frame</title>
-    <!-- Load A-Frame -->
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <!-- Load AR.js -->
-    <script src="https://cdn.jsdelivr.net/npm/ar.js@3.0.0/aframe/build/aframe-ar.js"></script>
-  </head>
-
-  <body style="margin: 0; overflow: hidden;">
-    <a-scene arjs="trackingMethod: best; sourceType: webcam;">
-      <!-- Hiro Marker (AR.js pattern) -->
-      <a-marker type="pattern" url="https://raw.githubusercontent.com/jeromeetienne/AR.js/master/data/patt.hiro">
-        <!-- Blue box to make sure the marker is being detected -->
-        <a-box position="0 0 0" scale="1 1 1" color="blue"></a-box>
-      </a-marker>
-      <!-- Camera -->
-      <a-camera></a-camera>
-    </a-scene>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AR Car Test</title>
+  <!-- Load A-Frame and AR.js -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ar.js@3.0.0/aframe/build/aframe-ar.js"></script>
+  <!-- Animation component for drifting effect -->
+  <script src="https://unpkg.com/aframe-animation-component@^5.1.2/dist/aframe-animation-component.min.js"></script>
+  
+  <script>
+    // Register custom drifting component
+    AFRAME.registerComponent('car-drift', {
+      init: function() {
+        this.el.setAttribute('animation', {
+          property: 'rotation',
+          dur: 5000,
+          from: '0 0 0',
+          to: '0 360 0',
+          loop: true,
+          easing: 'linear'
+        });
+      }
+    });
+    
+    // Log when model is loaded
+    AFRAME.registerComponent('model-loaded-log', {
+      init: function() {
+        const el = this.el;
+        el.addEventListener('model-loaded', function() {
+          console.log('Model loaded successfully!');
+          
+          // Show debug message on screen
+          const debugElement = document.getElementById('debug-message');
+          if (debugElement) {
+            debugElement.textContent = "Car model loaded successfully!";
+            debugElement.style.color = "green";
+            
+            // Hide message after 3 seconds
+            setTimeout(() => {
+              debugElement.style.opacity = "0";
+            }, 3000);
+          }
+        });
+        
+        el.addEventListener('model-error', function() {
+          console.error('Error loading model');
+          
+          // Show error message
+          const debugElement = document.getElementById('debug-message');
+          if (debugElement) {
+            debugElement.textContent = "Error loading car model!";
+            debugElement.style.color = "red";
+          }
+        });
+      }
+    });
+  </script>
+  
+  <style>
+    #debug-info {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: Arial, sans-serif;
+      z-index: 999;
+    }
+    
+    #debug-message {
+      transition: opacity 1s ease-in-out;
+    }
+  </style>
+</head>
+<body style="margin: 0; overflow: hidden;">
+  <a-scene embedded arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
+    <!-- Option 1: Standard Hiro Marker (uncomment to use) -->
+    <a-marker preset="hiro" id="hiro-marker">
+      <a-entity
+        gltf-model="path/to/your/scene.glb"
+        position="0 0.1 0"
+        rotation="0 0 0"
+        scale="0.5 0.5 0.5"
+        car-drift
+        model-loaded-log>
+      </a-entity>
+    </a-marker>
+    
+    <!-- Option 2: Custom QR Code Marker (uncomment and replace URL to use) -->
+    <!-- 
+    <a-marker type="pattern" url="path/to/your/custom-pattern.patt" id="qr-marker">
+      <a-entity
+        gltf-model="path/to/your/scene.glb"
+        position="0 0.1 0"
+        rotation="0 0 0"
+        scale="0.5 0.5 0.5"
+        car-drift
+        model-loaded-log>
+      </a-entity>
+    </a-marker>
+    -->
+    
+    <!-- Camera -->
+    <a-entity camera></a-entity>
+  </a-scene>
+  
+  <!-- Debug information -->
+  <div id="debug-info">
+    <p>AR Car Test</p>
+    <p id="debug-message">Waiting for marker...</p>
+  </div>
+</body>
 </html>
