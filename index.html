@@ -3,16 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AR Car Test</title>
+  <title>AR Car with Floor Positioning</title>
   <!-- Load A-Frame and AR.js -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-  <!-- Animation component -->
-  <script src="https://unpkg.com/aframe-animation-component@^5.1.2/dist/aframe-animation-component.min.js"></script>
   
   <script>
     window.onload = function() {
-      // Log when the page is fully loaded
       console.log("Page loaded. Click anywhere to start camera.");
       document.getElementById('loading-message').style.display = 'block';
       
@@ -23,34 +20,112 @@
       });
     };
     
-    // Register custom drifting component for ground-level car
-    AFRAME.registerComponent('car-drift', {
+    // Floor auto-alignment component
+    AFRAME.registerComponent('floor-align', {
       init: function() {
-        this.el.setAttribute('animation', {
-          property: 'rotation',
-          dur: 8000,
-          from: '0 0 0',
-          to: '0 360 0',
-          loop: true,
-          easing: 'linear'
+        // Get access to the camera entity
+        this.camera = document.querySelector('a-entity[camera]');
+        this.marker = this.el.closest('a-marker');
+        this.car = this.el;
+        
+        // Attach marker found event
+        this.marker.addEventListener('markerFound', this.onMarkerFound.bind(this));
+        
+        // Setup logging
+        this.el.addEventListener('model-loaded', () => {
+          document.getElementById('debug-message').textContent = "Car model loaded!";
+          document.getElementById('debug-message').style.color = "green";
+          console.log("Model loaded successfully");
         });
+        
+        // Track the device orientation
+        window.addEventListener('deviceorientation', this.handleOrientation.bind(this));
+        
+        // Initialize rotation values
+        this.deviceTilt = { alpha: 0, beta: 0, gamma: 0 };
+        this.lastUpdateTime = 0;
+        this.markerVisible = false;
+      },
+      
+      handleOrientation: function(event) {
+        // Store device orientation data
+        this.deviceTilt.alpha = event.alpha || 0; // Z-axis rotation
+        this.deviceTilt.beta = event.beta || 0;   // X-axis rotation
+        this.deviceTilt.gamma = event.gamma || 0; // Y-axis rotation
+        
+        document.getElementById('gyro-alpha').textContent = Math.round(this.deviceTilt.alpha);
+        document.getElementById('gyro-beta').textContent = Math.round(this.deviceTilt.beta);
+        document.getElementById('gyro-gamma').textContent = Math.round(this.deviceTilt.gamma);
+        
+        // Only update if enough time has passed (for performance)
+        const now = Date.now();
+        if (now - this.lastUpdateTime > 100 && this.markerVisible) {
+          this.updateCarOrientation();
+          this.lastUpdateTime = now;
+        }
+      },
+      
+      onMarkerFound: function() {
+        console.log("Marker found - adjusting orientation");
+        this.markerVisible = true;
+        document.getElementById('marker-status').textContent = "Visible";
+        document.getElementById('marker-status').style.color = "green";
+        
+        // Initial alignment
+        this.updateCarOrientation();
+      },
+      
+      updateCarOrientation: function() {
+        if (!this.car) return;
+        
+        // Calculate floor alignment from device orientation
+        // Beta is the front-to-back tilt (0° when flat)
+        // Gamma is the left-to-right tilt (0° when flat)
+        
+        // Basic orientation for the car to appear flat on the ground
+        // Start with -90 on X to lay car flat, then adjust based on device tilt
+        const baseRotationX = -90;
+        
+        // Calculate orientation adjustments based on device tilt
+        // These values may need tuning based on your specific model
+        const tiltCompensationX = this.deviceTilt.beta > 45 ? (90 - this.deviceTilt.beta) * 0.5 : 0;
+        const tiltCompensationZ = this.deviceTilt.gamma * 0.5;
+        
+        // Apply the rotation to the car
+        this.car.setAttribute('rotation', {
+          x: baseRotationX + tiltCompensationX,
+          y: 0,
+          z: tiltCompensationZ
+        });
+        
+        // Log the applied rotation for debugging
+        document.getElementById('car-rotation').textContent = 
+          `X: ${Math.round(baseRotationX + tiltCompensationX)}, Y: 0, Z: ${Math.round(tiltCompensationZ)}`;
+      },
+      
+      tick: function() {
+        // Keep checking marker visibility
+        if (this.marker) {
+          const isVisible = this.marker.object3D.visible;
+          if (isVisible !== this.markerVisible) {
+            this.markerVisible = isVisible;
+            document.getElementById('marker-status').textContent = isVisible ? "Visible" : "Hidden";
+            document.getElementById('marker-status').style.color = isVisible ? "green" : "red";
+          }
+        }
       }
     });
     
-    // Log when model is loaded
-    AFRAME.registerComponent('model-loaded-log', {
+    // Spinning animation component
+    AFRAME.registerComponent('car-spin', {
       init: function() {
-        const el = this.el;
-        el.addEventListener('model-loaded', function() {
-          console.log('Model loaded successfully!');
-          document.getElementById('debug-message').textContent = "Car model loaded successfully!";
-          document.getElementById('debug-message').style.color = "green";
-        });
-        
-        el.addEventListener('model-error', function(error) {
-          console.error('Error loading model:', error);
-          document.getElementById('debug-message').textContent = "Error loading car model!";
-          document.getElementById('debug-message').style.color = "red";
+        this.el.setAttribute('animation', {
+          property: 'rotation.y',
+          dur: 8000,
+          from: 0,
+          to: 360,
+          loop: true,
+          easing: 'linear'
         });
       }
     });
@@ -67,6 +142,7 @@
       border-radius: 5px;
       font-family: Arial, sans-serif;
       z-index: 999;
+      max-width: 300px;
     }
     
     #loading-message {
@@ -100,16 +176,21 @@
       z-index: 1000;
     }
     
-    #adjust-button {
+    .debug-heading {
+      font-weight: bold;
+      margin-bottom: 5px;
+      margin-top: 10px;
+    }
+    
+    #toggle-debug {
       position: fixed;
-      bottom: 80px;
-      right: 20px;
-      background: rgba(0,0,120,0.8);
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.5);
       color: white;
-      padding: 10px 15px;
       border: none;
+      padding: 5px 10px;
       border-radius: 5px;
-      font-family: Arial, sans-serif;
       z-index: 999;
     }
   </style>
@@ -118,7 +199,7 @@
   <!-- Click to start message -->
   <div id="click-message">
     Click anywhere to start the AR experience<br>
-    <small>Camera permission required</small>
+    <small>Camera and motion sensor access required</small>
   </div>
   
   <!-- Loading message -->
@@ -131,22 +212,12 @@
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
     <!-- Standard Hiro Marker -->
     <a-marker preset="hiro">
-      <!-- Ground plane to help with alignment (optional) -->
-      <a-plane position="0 0 0" 
-               rotation="-90 0 0" 
-               width="2" 
-               height="2" 
-               color="#7BC8A4" 
-               opacity="0.5"></a-plane>
-               
-      <!-- Car model - positioned flat on ground -->
+      <!-- Car model with floor alignment -->
       <a-entity
         gltf-model="./scene.glb"
         position="0 0 0"
-        rotation="-90 0 0" 
         scale="0.5 0.5 0.5"
-        car-drift
-        model-loaded-log>
+        floor-align>
       </a-entity>
     </a-marker>
     
@@ -156,66 +227,34 @@
   
   <!-- Debug information -->
   <div id="debug-info">
-    <p>AR Car Test</p>
+    <p>AR Car Floor Alignment</p>
     <p id="debug-message">Waiting for marker...</p>
+    
+    <div class="debug-heading">Marker:</div>
+    <p>Status: <span id="marker-status">Hidden</span></p>
+    
+    <div class="debug-heading">Gyroscope:</div>
+    <p>Alpha: <span id="gyro-alpha">0</span>° (Z rotation)</p>
+    <p>Beta: <span id="gyro-beta">0</span>° (X tilt - front/back)</p>
+    <p>Gamma: <span id="gyro-gamma">0</span>° (Y tilt - left/right)</p>
+    
+    <div class="debug-heading">Car Rotation:</div>
+    <p><span id="car-rotation">X: -90, Y: 0, Z: 0</span></p>
   </div>
   
-  <!-- Position adjustment buttons -->
-  <button id="adjust-button" onclick="toggleAdjustmentControls()">Adjust Position</button>
-  
-  <div id="adjustment-controls" style="position: fixed; bottom: 120px; right: 20px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; z-index: 999; display: none;">
-    <div>
-      <button onclick="adjustCar('rotX', -5)">Rotate X -</button>
-      <button onclick="adjustCar('rotX', 5)">Rotate X +</button>
-    </div>
-    <div style="margin-top: 5px;">
-      <button onclick="adjustCar('posY', -0.05)">Lower</button>
-      <button onclick="adjustCar('posY', 0.05)">Raise</button>
-    </div>
-    <div style="margin-top: 5px;">
-      <button onclick="adjustCar('scale', -0.05)">Smaller</button>
-      <button onclick="adjustCar('scale', 0.05)">Larger</button>
-    </div>
-  </div>
+  <button id="toggle-debug" onclick="toggleDebug()">Hide Debug</button>
   
   <script>
-    function toggleAdjustmentControls() {
-      const controls = document.getElementById('adjustment-controls');
-      controls.style.display = controls.style.display === 'none' ? 'block' : 'none';
-    }
-    
-    function adjustCar(property, value) {
-      const car = document.querySelector('a-entity[gltf-model]');
+    function toggleDebug() {
+      const debugInfo = document.getElementById('debug-info');
+      const button = document.getElementById('toggle-debug');
       
-      if (property === 'rotX') {
-        const currentRotation = car.getAttribute('rotation');
-        car.setAttribute('rotation', {
-          x: currentRotation.x + value,
-          y: currentRotation.y,
-          z: currentRotation.z
-        });
-        console.log(`Rotation X: ${currentRotation.x + value}`);
-      }
-      
-      if (property === 'posY') {
-        const currentPosition = car.getAttribute('position');
-        car.setAttribute('position', {
-          x: currentPosition.x,
-          y: currentPosition.y + value,
-          z: currentPosition.z
-        });
-        console.log(`Position Y: ${currentPosition.y + value}`);
-      }
-      
-      if (property === 'scale') {
-        const currentScale = car.getAttribute('scale');
-        const newScale = Math.max(0.1, currentScale.x + value);
-        car.setAttribute('scale', {
-          x: newScale,
-          y: newScale,
-          z: newScale
-        });
-        console.log(`Scale: ${newScale}`);
+      if (debugInfo.style.display === 'none') {
+        debugInfo.style.display = 'block';
+        button.textContent = 'Hide Debug';
+      } else {
+        debugInfo.style.display = 'none';
+        button.textContent = 'Show Debug';
       }
     }
   </script>
