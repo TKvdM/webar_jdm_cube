@@ -124,7 +124,7 @@
       }
     });
     
-    // Racing-style drift animation component
+    // Racing-style drift animation component with NFS-style improvements
     AFRAME.registerComponent('racing-drift', {
       schema: {
         // Animation settings
@@ -132,19 +132,24 @@
         driftIntensity: {type: 'number', default: 25},
         smokeDuration: {type: 'number', default: 2000}, // ms
         repeatDelay: {type: 'number', default: 1000}, // ms between animations
-        autoRepeat: {type: 'boolean', default: true}
+        autoRepeat: {type: 'boolean', default: true},
+        showroomSpeed: {type: 'number', default: 0.01} // Speed of showroom rotation/road movement
       },
       
       init: function() {
         // Setup animation state
         this.isAnimating = false;
-        this.animationPhase = 'idle'; // idle, entrance, drift, finish
+        this.animationPhase = 'idle'; // idle, entrance, drift, showroom, finish
         this.progress = 0;
         this.startTime = 0;
         this.startPos = {x: -2, y: 0, z: -1}; // Off-screen starting position
         this.targetPos = {x: 0, y: 0, z: 0}; // Final position at marker
         this.driftAngle = 0;
         this.tireSmoke = [];
+        this.showroomAngle = 0;
+        
+        // Create virtual road
+        this.createRoad();
         
         // Get marker reference from parent component
         this.marker = this.el.closest('a-marker');
@@ -167,9 +172,70 @@
           this.data.driftIntensity = parseFloat(e.target.value);
           document.getElementById('intensity-value').textContent = this.data.driftIntensity.toFixed(0);
         });
+
+        document.getElementById('showroom-speed').addEventListener('input', (e) => {
+          this.data.showroomSpeed = parseFloat(e.target.value);
+          document.getElementById('showroom-speed-value').textContent = this.data.showroomSpeed.toFixed(2);
+        });
         
         // Create tire smoke particles
         this.createTireSmoke();
+      },
+      
+      createRoad: function() {
+        // Create road parent entity
+        const roadParent = document.createElement('a-entity');
+        roadParent.setAttribute('position', '0 -0.02 0');
+        this.el.sceneEl.appendChild(roadParent);
+        this.roadParent = roadParent;
+        
+        // Create the main road surface
+        const road = document.createElement('a-entity');
+        road.setAttribute('geometry', {
+          primitive: 'plane',
+          width: 2,
+          height: 5
+        });
+        road.setAttribute('rotation', {x: -90, y: 0, z: 0});
+        road.setAttribute('position', {x: 0, y: 0, z: 0});
+        road.setAttribute('material', {
+          color: '#333333',
+          roughness: 0.7,
+          metalness: 0.3
+        });
+        roadParent.appendChild(road);
+        this.road = road;
+        
+        // Create multiple road stripes for movement effect
+        this.roadStripes = [];
+        const stripeCount = 8;
+        for (let i = 0; i < stripeCount; i++) {
+          const stripe = document.createElement('a-entity');
+          stripe.setAttribute('geometry', {
+            primitive: 'plane',
+            width: 0.05,
+            height: 0.3
+          });
+          stripe.setAttribute('rotation', {x: -90, y: 0, z: 0});
+          
+          // Position stripes along the length of the road
+          const zPos = -2 + (i * 0.5);
+          
+          stripe.setAttribute('position', {x: 0, y: 0.001, z: zPos});
+          stripe.setAttribute('material', {
+            color: '#FFFFFF',
+            roughness: 0.5,
+            metalness: 0.2
+          });
+          roadParent.appendChild(stripe);
+          this.roadStripes.push({
+            entity: stripe,
+            baseZ: zPos
+          });
+        }
+        
+        // Initially hide the road
+        roadParent.setAttribute('visible', false);
       },
       
       createTireSmoke: function() {
@@ -180,7 +246,7 @@
         this.smokeParent = smokeParent;
         
         // Create individual smoke particles
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 12; i++) { // Doubled the number of particles
           const smoke = document.createElement('a-entity');
           smoke.setAttribute('geometry', {
             primitive: 'plane',
@@ -200,21 +266,29 @@
       
       showTireSmoke: function(show) {
         // Show/hide and position smoke particles at the rear wheels
-        const isVisible = show && this.animationPhase === 'drift';
+        const isVisible = show && (this.animationPhase === 'drift' || this.animationPhase === 'entrance');
         this.tireSmoke.forEach((smoke, index) => {
           if (isVisible) {
             // Position smoke behind car based on index
-            const xOffset = (index % 2 === 0) ? -0.1 : 0.1; // Left or right wheel
-            const zOffset = -0.2 - (Math.floor(index / 2) * 0.05); // Behind car, staggered
+            const xOffset = (index % 2 === 0) ? -0.15 : 0.15; // Left or right wheel - wider spread
+            const zOffset = -0.2 - (Math.floor(index / 2) * 0.08); // Behind car, more staggered
             
             // Random slight offsets for more natural look
-            const randomX = (Math.random() - 0.5) * 0.05;
-            const randomZ = (Math.random() - 0.5) * 0.05;
+            const randomX = (Math.random() - 0.5) * 0.08;
+            const randomZ = (Math.random() - 0.5) * 0.08;
+            
+            // Add spreading effect based on car speed and drift intensity
+            // More spread during the entrance phase
+            let spreadFactor = 1;
+            if (this.animationPhase === 'entrance') {
+              // More spread during the entrance phase
+              spreadFactor = 1.5 + (this.progress * 0.5);
+            }
             
             smoke.setAttribute('position', {
-              x: xOffset + randomX,
+              x: xOffset * spreadFactor + randomX,
               y: 0.02, // Slightly above ground
-              z: zOffset + randomZ
+              z: zOffset * spreadFactor + randomZ
             });
             
             // Random rotation for variety
@@ -224,9 +298,14 @@
               z: 0
             });
             
-            // Size variation
-            const scale = 0.1 + (Math.random() * 0.15);
+            // Size variation - larger during high speed
+            const scale = 0.1 + (Math.random() * 0.2) + (this.progress * 0.1);
             smoke.setAttribute('scale', {x: scale, y: scale, z: scale});
+            
+            // Opacity variation - more opaque during high drift angles
+            const opacity = this.animationPhase === 'entrance' ? 
+                          0.3 + (this.driftAngle / this.data.driftIntensity * 0.4) : 0.7;
+            smoke.setAttribute('material', 'opacity', opacity);
             
             smoke.setAttribute('visible', true);
           } else {
@@ -250,18 +329,78 @@
         const currentRotation = this.el.getAttribute('rotation');
         this.el.setAttribute('rotation', {
           x: currentRotation.x,
-          y: -30, // Car is initially turning into the drift
+          y: -45, // Car is initially turned more sharply into the drift
           z: currentRotation.z
         });
+        
+        // Hide road during entrance
+        if (this.roadParent) {
+          this.roadParent.setAttribute('visible', false);
+        }
         
         document.getElementById('animation-status').textContent = "Entrance";
         
         console.log("Starting drift animation");
       },
       
+      updateRoadAnimation: function() {
+        if (!this.roadParent || !this.roadStripes) return;
+        
+        // Make road visible during showroom phase
+        this.roadParent.setAttribute('visible', this.animationPhase === 'showroom');
+        
+        // Position road under car
+        if (this.marker && this.marker.object3D) {
+          const position = this.marker.object3D.position;
+          this.roadParent.setAttribute('position', {
+            x: position.x,
+            y: -0.02, // Slightly below marker
+            z: position.z
+          });
+          
+          // Align road with marker rotation
+          const rotation = this.marker.object3D.rotation;
+          this.roadParent.setAttribute('rotation', {
+            x: 0,
+            y: THREE.Math.radToDeg(rotation.y),
+            z: 0
+          });
+        }
+        
+        // Animate road stripes
+        if (this.animationPhase === 'showroom') {
+          this.roadStripes.forEach(stripe => {
+            // Move stripe forward
+            let zPos = stripe.baseZ + (performance.now() * this.data.showroomSpeed * 0.001) % 4;
+            
+            // Reset when it goes too far
+            if (zPos > 2) {
+              zPos -= 4;
+            }
+            
+            stripe.entity.setAttribute('position', {
+              x: 0,
+              y: 0.001,
+              z: zPos
+            });
+          });
+        }
+      },
+      
       tick: function(time, deltaTime) {
-        // Skip if not animating or marker not visible
-        if (!this.isAnimating || (this.marker && !this.marker.object3D.visible)) return;
+        // Skip if marker not visible
+        if (this.marker && !this.marker.object3D.visible) {
+          this.isAnimating = false;
+          this.animationPhase = 'idle';
+          document.getElementById('animation-status').textContent = "Idle";
+          return;
+        }
+        
+        // Update road animation
+        this.updateRoadAnimation();
+        
+        // Skip if not animating
+        if (!this.isAnimating) return;
         
         const now = performance.now();
         const elapsedTime = now - this.startTime;
@@ -269,7 +408,7 @@
         // Update animation based on current phase
         switch (this.animationPhase) {
           case 'entrance':
-            // Move car from off-screen towards marker in a curve
+            // Move car from off-screen towards marker in a more dynamic curve
             this.progress += this.data.entranceSpeed * (deltaTime / 16.67); // Normalize to ~60fps
             
             if (this.progress >= 1) {
@@ -280,15 +419,22 @@
             }
             
             // Use curves for a more dynamic entrance
-            const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-            const p = easeInOutCubic(this.progress);
+            const easeInOutBack = t => {
+              const c1 = 1.70158;
+              const c2 = c1 * 1.525;
+              return t < 0.5
+                ? (Math.pow(2 * t, 2) * ((c2 + 1) * 2 * t - c2)) / 2
+                : (Math.pow(2 * t - 2, 2) * ((c2 + 1) * (t * 2 - 2) + c2) + 2) / 2;
+            };
+            
+            const p = easeInOutBack(this.progress);
             
             // Calculate position along a curved path
             const x = this.startPos.x + (this.targetPos.x - this.startPos.x) * p;
             const z = this.startPos.z + (this.targetPos.z - this.startPos.z) * p;
             
-            // Add a curve to the path (car comes in from side in an arc)
-            const curveOffset = Math.sin(p * Math.PI) * 0.5;
+            // Add a more aggressive curve to the path (car comes in from side in a sharper arc)
+            const curveOffset = Math.sin(p * Math.PI) * 0.8;
             
             this.el.setAttribute('position', {
               x: x + curveOffset,
@@ -296,51 +442,112 @@
               z: z
             });
             
-            // Calculate car direction and drift angle
-            // Drift angle starts high and decreases as car approaches target
-            const entranceDriftAngle = this.data.driftIntensity * (1 - p);
-            const targetRotationY = -30 + (30 * p); // From initial -30° to 0°
+            // Calculate car direction and drift angle for more dynamic movement
+            // Drift angle starts very high, then decreases, then increases again as car approaches target
+            // This creates a counter-steering effect like in real drifting
+            const entranceProgress = this.progress;
+            const driftCurve = Math.sin(entranceProgress * Math.PI * 1.5); // Oscillating drift
+            this.driftAngle = this.data.driftIntensity * (1 - entranceProgress) * (1 + driftCurve * 0.5);
+            
+            // Car body lean effect during drift (z-axis rotation)
+            const leanAngle = driftCurve * 5; // -5 to +5 degrees of body roll
+            
+            // Base rotation gradually changes from -45 to 0
+            const targetRotationY = -45 + (45 * p);
             
             // Apply rotation
             const currentRotation = this.el.getAttribute('rotation');
             this.el.setAttribute('rotation', {
               x: currentRotation.x,
-              y: targetRotationY + entranceDriftAngle,
-              z: currentRotation.z
+              y: targetRotationY + this.driftAngle,
+              z: currentRotation.z + leanAngle
             });
+            
+            // Show tire smoke during entrance with intensity based on drift angle
+            this.showTireSmoke(Math.abs(this.driftAngle) > 5);
             
             // Update debug
             document.getElementById('car-position').textContent = 
               `X: ${x.toFixed(2)}, Y: 0, Z: ${z.toFixed(2)}`;
             document.getElementById('car-direction').textContent = 
-              `Heading: ${Math.round(targetRotationY)}°, Drift: ${Math.round(entranceDriftAngle)}°`;
+              `Heading: ${Math.round(targetRotationY)}°, Drift: ${Math.round(this.driftAngle)}°`;
             break;
             
           case 'drift':
             // Hold drift position and show tire smoke
             this.showTireSmoke(true);
             
-            // Gradual straightening of the car
+            // Gradual straightening of the car with some oscillation
             const driftPhaseProgress = Math.min(1, elapsedTime / this.data.smokeDuration);
+            const oscillation = Math.sin(driftPhaseProgress * Math.PI * 3) * 5; // Adds small wobble
             const targetStraightRotationY = 0; // Final straightened position
-            const currentDriftAngle = this.data.driftIntensity * (1 - driftPhaseProgress);
+            this.driftAngle = this.data.driftIntensity * (1 - driftPhaseProgress) + oscillation;
+            
+            // Car bobbing effect - slight up/down movement
+            const bobHeight = Math.sin(elapsedTime * 0.01) * 0.01;
+            const currentPos = this.el.getAttribute('position');
+            this.el.setAttribute('position', {
+              x: currentPos.x,
+              y: bobHeight,
+              z: currentPos.z
+            });
             
             // Apply rotation while straightening
             const driftRotation = this.el.getAttribute('rotation');
             this.el.setAttribute('rotation', {
               x: driftRotation.x,
-              y: targetStraightRotationY + currentDriftAngle,
-              z: driftRotation.z
+              y: targetStraightRotationY + this.driftAngle,
+              z: driftRotation.z + (oscillation * 0.5) // Slight body roll
             });
             
             // Update debug
             document.getElementById('car-direction').textContent = 
-              `Heading: ${Math.round(targetStraightRotationY)}°, Drift: ${Math.round(currentDriftAngle)}°`;
+              `Heading: ${Math.round(targetStraightRotationY)}°, Drift: ${Math.round(this.driftAngle)}°`;
             
             // End drift phase after set duration
             if (elapsedTime >= this.data.smokeDuration) {
-              this.animationPhase = 'finish';
+              this.animationPhase = 'showroom';
               this.showTireSmoke(false);
+              document.getElementById('animation-status').textContent = "Showroom";
+              this.startTime = now; // Reset timer for showroom phase
+              this.showroomAngle = 0;
+            }
+            break;
+            
+          case 'showroom':
+            // NFS Underground style showroom effect with moving road and subtle car movement
+            const showroomDuration = 8000; // 8 seconds in showroom mode
+            const showroomProgress = Math.min(1, elapsedTime / showroomDuration);
+            
+            // Subtle car bounce and rotation in showroom mode
+            this.showroomAngle += deltaTime * this.data.showroomSpeed * 0.01;
+            
+            // Car subtle movement - small circular motion + bobbing
+            const currentPos = this.el.getAttribute('position');
+            const hoverRadius = 0.05;
+            const xOffset = Math.sin(this.showroomAngle * 0.5) * hoverRadius * 0.5;
+            const zOffset = Math.cos(this.showroomAngle * 0.3) * hoverRadius * 0.5;
+            const yOffset = Math.abs(Math.sin(this.showroomAngle)) * 0.02; // Subtle bobbing
+            
+            this.el.setAttribute('position', {
+              x: this.targetPos.x + xOffset,
+              y: yOffset,
+              z: this.targetPos.z + zOffset
+            });
+            
+            // Apply subtle rotation - car slowly rotates for display
+            const showroomRotation = this.el.getAttribute('rotation');
+            const rotYOffset = Math.sin(this.showroomAngle * 0.2) * 5; // Subtle rotation -5° to +5°
+            
+            this.el.setAttribute('rotation', {
+              x: showroomRotation.x,
+              y: rotYOffset,
+              z: showroomRotation.z + (Math.sin(this.showroomAngle * 0.5) * 2) // Subtle body roll
+            });
+            
+            // End showroom phase after set duration
+            if (elapsedTime >= showroomDuration) {
+              this.animationPhase = 'finish';
               document.getElementById('animation-status').textContent = "Finished";
               this.startTime = now; // Reset timer for finish delay
             }
@@ -515,13 +722,18 @@
     </div>
     
     <div class="slider-container">
-      <label for="entrance-speed">Speed: <span id="speed-value">0.03</span></label>
+      <label for="entrance-speed">Entry Speed: <span id="speed-value">0.03</span></label>
       <input type="range" id="entrance-speed" min="0.01" max="0.1" step="0.01" value="0.03">
     </div>
     
     <div class="slider-container">
       <label for="drift-intensity">Drift Angle: <span id="intensity-value">25</span>°</label>
       <input type="range" id="drift-intensity" min="0" max="45" value="25">
+    </div>
+    
+    <div class="slider-container">
+      <label for="showroom-speed">Showroom Speed: <span id="showroom-speed-value">0.01</span></label>
+      <input type="range" id="showroom-speed" min="0.005" max="0.05" step="0.005" value="0.01">
     </div>
   </div>
   
@@ -542,25 +754,14 @@
     <p><span id="car-rotation">X: 0, Y: 0, Z: 0</span></p>
     
     <div class="debug-heading">Car Position:</div>
-    <p><span id="car-position">X: 0, Y: 0, Z: 0</span></p>
+<p><span id="car-position">X: 0, Y: 0, Z: 0</span></p>
+    
+    <div class="debug-heading">Car Direction:</div>
     <p><span id="car-direction">Heading: 0°, Drift: 0°</span></p>
+    
+    <button id="toggle-debug" onclick="document.getElementById('debug-info').style.display = document.getElementById('debug-info').style.display === 'none' ? 'block' : 'none';">
+      Toggle Debug
+    </button>
   </div>
-  
-  <button id="toggle-debug" onclick="toggleDebug()">Hide Debug</button>
-  
-  <script>
-    function toggleDebug() {
-      const debugInfo = document.getElementById('debug-info');
-      const button = document.getElementById('toggle-debug');
-      
-      if (debugInfo.style.display === 'none') {
-        debugInfo.style.display = 'block';
-        button.textContent = 'Hide Debug';
-      } else {
-        debugInfo.style.display = 'none';
-        button.textContent = 'Show Debug';
-      }
-    }
-  </script>
 </body>
 </html>
