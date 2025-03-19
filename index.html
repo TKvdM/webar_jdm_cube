@@ -59,10 +59,18 @@
     
     AFRAME.registerComponent('showroom-animation', {
       tick: function (time, timeDelta) {
-        let angle = (time / 50) % 360;
-        let bounce = Math.sin(time / 500) * 0.02;
+        let angle = Math.sin(time / 500) * 5; // Slight left-right sway
+        let bounce = Math.sin(time / 300) * 0.02; // Slight engine vibration
         this.el.setAttribute('rotation', `0 ${angle} 0`);
         this.el.setAttribute('position', `0 ${bounce} 0`);
+      }
+    });
+    
+    AFRAME.registerComponent('moving-road', {
+      tick: function (time, timeDelta) {
+        let road = this.el;
+        let offset = (time / 1000) % 1;
+        road.setAttribute('material', 'offset', `0 ${offset}`);
       }
     });
   </script>
@@ -100,7 +108,8 @@
   <!-- A-Frame scene -->
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
     <a-marker preset="hiro" marker-listener>
-      <a-entity gltf-model="./scene.glb" scale="0.5 0.5 0.5" drift-entry></a-entity>
+      <a-entity gltf-model="./scene.glb" scale="0.5 0.5 0.5" drift-entry showroom-animation></a-entity>
+      <a-plane position="0 -0.02 0" rotation="-90 0 0" width="2" height="5" material="color: #333; repeat: 1 5;" moving-road></a-plane>
     </a-marker>
     <a-entity camera></a-entity>
   </a-scene>
