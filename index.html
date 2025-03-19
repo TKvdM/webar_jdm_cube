@@ -9,16 +9,41 @@
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   
   <script>
-    window.onload = function() {
-      console.log("Page loaded. Click anywhere to start camera.");
-      document.getElementById('loading-message').style.display = 'block';
-      
-      // Add click event to start AR
-      document.body.addEventListener('click', function() {
-        document.getElementById('loading-message').style.display = 'none';
-        document.getElementById('click-message').style.display = 'none';
-      });
-    };
+window.onload = function() {
+  console.log("Page loaded. Click anywhere to start camera.");
+  document.getElementById('loading-message').style.display = 'block';
+  
+  // Add click event to start AR - make sure this covers the entire page
+  document.addEventListener('click', function() {
+    console.log("Click detected - hiding messages");
+    
+    // Hide both messages
+    const loadingMessage = document.getElementById('loading-message');
+    if (loadingMessage) loadingMessage.style.display = 'none';
+    
+    const clickMessage = document.getElementById('click-message');
+    if (clickMessage) clickMessage.style.display = 'none';
+  });
+  
+  // Also add click handlers directly to the message elements
+  const clickMessage = document.getElementById('click-message');
+  if (clickMessage) {
+    clickMessage.addEventListener('click', function(e) {
+      e.stopPropagation(); // Prevent event bubbling
+      clickMessage.style.display = 'none';
+      document.getElementById('loading-message').style.display = 'none';
+    });
+  }
+  
+  const loadingMessage = document.getElementById('loading-message');
+  if (loadingMessage) {
+    loadingMessage.addEventListener('click', function(e) {
+      e.stopPropagation(); // Prevent event bubbling
+      loadingMessage.style.display = 'none';
+      document.getElementById('click-message').style.display = 'none';
+    });
+  }
+};
     
     // Floor auto-alignment component
     AFRAME.registerComponent('floor-align', {
