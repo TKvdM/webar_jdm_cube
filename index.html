@@ -16,52 +16,59 @@
       
       document.addEventListener('click', function() {
         console.log("Click detected - Starting AR session");
-        
-        const loadingMessage = document.getElementById('loading-message');
-        if (loadingMessage) loadingMessage.style.display = 'none';
-        
-        const clickMessage = document.getElementById('click-message');
-        if (clickMessage) clickMessage.style.display = 'none';
-        
-        // Ensure AR.js initializes correctly
+        document.getElementById('loading-message').style.display = 'none';
+        document.getElementById('click-message').style.display = 'none';
         document.querySelector('a-scene').setAttribute('arjs', 'sourceType: webcam;');
-      }, { once: true }); // Ensures it only triggers once
+      }, { once: true });
     };
     
-    AFRAME.registerComponent('drift-entry', {
+    AFRAME.registerComponent('marker-listener', {
       init: function () {
-        this.el.setAttribute('position', '-2 0 -1'); // Start offscreen
-        this.el.setAttribute('rotation', '0 45 0');
-        this.el.addEventListener('model-loaded', () => {
-          this.startDrift();
+        let marker = this.el;
+        let button = document.getElementById("start-drift-button");
+        marker.addEventListener('markerFound', function() {
+          button.style.display = "block";
         });
-      },
-      startDrift: function () {
-        this.el.setAttribute('animation', {
-          property: 'position',
-          to: '0 0 0',
-          dur: 2000,
-          easing: 'easeOutQuad'
-        });
-        this.el.setAttribute('animation__rotation', {
-          property: 'rotation',
-          to: '0 0 0',
-          dur: 2000,
-          easing: 'easeOutQuad'
+        marker.addEventListener('markerLost', function() {
+          button.style.display = "none";
         });
       }
     });
     
+    function startDrift() {
+      let car = document.querySelector("[drift-entry]");
+      car.setAttribute('animation', {
+        property: 'position',
+        to: '0 0 0',
+        dur: 1500,
+        easing: 'easeOutQuad',
+        from: '-2 0 -1'
+      });
+      car.setAttribute('animation__rotation', {
+        property: 'rotation',
+        to: '0 0 0',
+        dur: 1500,
+        easing: 'easeOutQuad',
+        from: '0 45 0'
+      });
+      setTimeout(() => {
+        car.setAttribute('showroom-animation', '');
+      }, 1600);
+      document.getElementById("start-drift-button").style.display = "none";
+    }
+    
     AFRAME.registerComponent('showroom-animation', {
       tick: function (time, timeDelta) {
-        let angle = (time / 1000) * 10;
+        let angle = (time / 50) % 360;
+        let bounce = Math.sin(time / 500) * 0.02;
         this.el.setAttribute('rotation', `0 ${angle} 0`);
+        this.el.setAttribute('position', `0 ${bounce} 0`);
       }
     });
   </script>
   
   <style>
-    #loading-message, #click-message {
+    #loading-message, #click-message, #start-drift-button {
       position: fixed;
       top: 50%;
       left: 50%;
@@ -74,7 +81,7 @@
       text-align: center;
       z-index: 9999;
     }
-    #loading-message { display: none; }
+    #loading-message, #start-drift-button { display: none; }
   </style>
 </head>
 <body style="margin: 0; overflow: hidden;">
@@ -87,10 +94,13 @@
     <p>Please allow camera access when prompted</p>
   </div>
   
+  <!-- Start Drift Button -->
+  <button id="start-drift-button" onclick="startDrift()">Start Drift</button>
+  
   <!-- A-Frame scene -->
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
-    <a-marker preset="hiro">
-      <a-entity gltf-model="./scene.glb" scale="0.5 0.5 0.5" drift-entry showroom-animation></a-entity>
+    <a-marker preset="hiro" marker-listener>
+      <a-entity gltf-model="./scene.glb" scale="0.5 0.5 0.5" drift-entry></a-entity>
     </a-marker>
     <a-entity camera></a-entity>
   </a-scene>
@@ -104,4 +114,3 @@
   </div>
 </body>
 </html>
-
