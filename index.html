@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AR Drifting Car - Racing Game Style</title>
+  <title>AR Drifting Car - Cube Display</title>
   
   <!-- Load A-Frame and AR.js from a reliable source -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
@@ -105,17 +105,17 @@
       let car = document.querySelector("[drift-entry]");
       car.setAttribute('animation', {
         property: 'position',
-        to: '0 0 0',
+        to: '0 0.1 0',  // Position just above the road
         dur: 1500,
         easing: 'easeOutQuad',
-        from: '-2 0 -1'
+        from: '-1 0.1 -0.5'
       });
       car.setAttribute('animation__rotation', {
         property: 'rotation',
-        to: '0 0 0',
+        to: '0 90 0',  // Car facing along the road
         dur: 1500,
         easing: 'easeOutQuad',
-        from: '0 45 0'
+        from: '0 135 0'
       });
       setTimeout(() => {
         car.setAttribute('showroom-animation', '');
@@ -127,8 +127,8 @@
       tick: function (time, timeDelta) {
         let angle = Math.sin(time / 500) * 5; // Slight left-right sway
         let bounce = Math.sin(time / 300) * 0.02; // Slight engine vibration
-        this.el.setAttribute('rotation', `0 ${angle} 0`);
-        this.el.setAttribute('position', `0 ${bounce} 0`);
+        this.el.setAttribute('rotation', `0 ${90 + angle} 0`);  // Maintain 90 degree base rotation
+        this.el.setAttribute('position', `0 ${0.1 + bounce} 0`);  // Keep height consistent
       }
     });
     
@@ -137,15 +137,10 @@
         speed: {type: 'number', default: 1.0}
       },
       init: function() {
-        // Create texture for road with lines
-        this.roadTexture = new THREE.TextureLoader().load('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK7OHOkAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAABIFJREFUeNrt3T1oFEEcBfD3do+gEBUU8aMSBFGwE0FBxCKFjVjYWFkJKdLZWFoJVnZiY2MhiGBhYSMIFmJhYRONRkHFaCSKH0k07kx2xmQvyWV3Z5O9y/zeK3Lcu72d+d/M7MztriAiIiIiIiIiIiIiIiIiIiIiIiIiImoDAzgKYAeADTZmAJiK5GjL2Z8TZwAf2Ox78xhxZ54Fsi+nbxXAeQB9AD4D6APwAcBTD3k3PTl9IYA9AG7a2GHjHoBBAOcyzmMAdNtj0h7v2jHxGcCnjHPptmM39gIwdXUcwBMPxakNHwBscnV8VePZO5JxQdcA6ALwo4WcPgA4AOBuxnm8AnAOwIAtwH12FnzZ1tlZdrPAHxvrYkytyasDNwt02VmiCuCRgDy2AbhgYwjAWxufANwHMGbPPQDgr50pPwI4DuB1xnn12Vjv4i+AcwH3/9/JQ/VYuDTlvC0u/ot8FsA4gDcAzgIYtQPqMoBXKb/zVcbPAVPZoA7+OIDNVc5xvU23zTZKEp79VQA3APQCuFUlnwEAJ6vkMV7aWOExR8KSBgFn/zyAnQDOAriEYkPZVQBvAZwCcNH++wmAtxnnJWEm6WJzK8BmG+UALtjOugPAGI33/XMAngPYB2Av/t2m9QM4mnFeEvpXUiXMsRsAnMrpItMAuoDnARzMOI9JAC8B7APwGsBxFPeR8zYu5nAdkkYAxu4sTwL4VKXg4wDeATiG4pntUgAn7GCbzTOBERMJlzFl496U7ydKA2u+zYSxAA7mlUCn6CQzABOwAJSABaAELAAlYAEoAQtACVgASsACUAIWgBKwAJSABaAELAAlYAEoAQtACVgASsACUAIWgBKwAJSABaAELAAlYAEoAQtACVgASsACUAIWgBKwAJSABaAEnXQP7Z8A7gC40YYcbqM4C/lMzrm2K4Z9OX2TKA7hzzqXCRSTTJrJYQDFOUKdEKMoDtfPOpdxG80ciYy0GZuRJoQTQhqQMCGuEmZs56SVYRrAeUiYB9jtKj8D4JK9yFEUczOnXbTwXsB2+/WpAC4H5PIUwGEUZ/5ktRfwEcBhAHdznCF3oZgpMy3HXCZTtrfmMjsBfLO9tmJnhEl7ofMAjjtepJGEwVKXgMklZW6jj3cUC7eRcKPP9xSIuQY5XLEzLQ4DuJLyO3dRHOL+uc0C6AGw1T4u2+dyBN9RzHYdyziPvQC22MtZ1SFTYmTNXk8BFh+SsEzAQ8yZg0PAsQBPcCYT5gBkOgLqMy8fZI4W+OPjJFMWgBKwAJSABaAELAAlYAEoAQtACVgASsACUIKsiuDjdOxQZoB6t4E9noKZEQJ87nGXw0uNnTQlTKd9bcQSp4SvjTmtgJzWoXu1PzGv/XkvKwkrAONkFhADME7mAcxnKlrjAZgVnMtSzNi8fD4HaOzxwocltTcGkGcB8n6DKQ9L6ozxwDyMp2Vg+c2hwhfCXGxLbpQxS2xnLiMWwBKbC0Q5/u1lhWAixqIQCTFvx0Cch3ndWYjwzPcYQvEQ8MzHaJwXmBERERERERERERERERERERERERERERGtKX8BNwUeWZB74pcAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjEtMTAtMjlUMDE6MTc6NDcrMDA6MDDiWEqpAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDIxLTEwLTI5VDAxOjE3OjQ3KzAwOjAwkwXyFQAAAABJRU5ErkJggg==');
-        this.roadTexture.wrapS = THREE.RepeatWrapping;
-        this.roadTexture.wrapT = THREE.RepeatWrapping;
-        this.roadTexture.repeat.set(1, 5);
-        
-        // Apply texture to the road
+        // Create material with road texture
         this.el.setAttribute('material', {
-          src: this.roadTexture,
+          color: '#333',
+          src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAMAAABrrFhUAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyNpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDYuMC1jMDAyIDc5LjE2NDQ4OCwgMjAyMC8wNy8xMC0yMjowNjo1MyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDIyLjAgKFdpbmRvd3MpIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjVCOTk3NDQ3M0JFQjExRUI5OERCRDE3MDA1RDIzREVEIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjVCOTk3NDQ4M0JFQjExRUI5OERCRDE3MDA1RDIzREVEIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NUI5OTc0NDUzQkVCMTFFQjk4REJEMTcwMDVEMjNERUQiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NUI5OTc0NDYzQkVCMTFFQjk4REJEMTcwMDVEMjNERUQiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz4SBMh9AAAABlBMVEU9PT0AAADEuYnFAAAAAnRSTlP/AOW3MEoAAACgSURBVHja7MExAQAAAMKg9U9tCj+gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOA0qnUAATtT63IAAAAASUVORK5CYII=',
           repeat: '1 5'
         });
       },
@@ -233,25 +228,36 @@
   
   <!-- QR code instructions -->
   <div id="qr-instructions">
-    Point your camera at the QR code to see the JDM car. Tilt your phone naturally - the gyroscope will keep the car level.
+    Point your camera at the QR code inside the cube. The car will appear on the floor of the cube.
   </div>
   
   <!-- A-Frame scene -->
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
-    <!-- Image-based marker instead of barcode -->
+    <!-- Image-based marker using pattern -->
     <a-marker type="pattern" url="./pattern-qr.patt" marker-listener>
-      <!-- Car model with correct path -->
-      <a-entity gltf-model="./assets/scene.glb" scale="0.5 0.5 0.5" position="-2 0 -1" rotation="0 45 0" drift-entry></a-entity>
-      
-      <!-- Improved road with proper positioning and material -->
-      <a-plane position="0 -0.1 0" rotation="-90 0 0" width="3" height="6" color="#333" moving-road="speed: 0.5"></a-plane>
+      <!-- Modified scene positioning for inside cube view -->
+      <a-entity id="scene-container" position="0 0 0" rotation="0 0 0">
+        <!-- Road positioned flat on bottom of cube -->
+        <a-plane id="road" position="0 0 0" rotation="-90 0 0" width="1.5" height="2.5" moving-road="speed: 0.3"></a-plane>
+        
+        <!-- Car positioned above the road, with initial position for animation -->
+        <a-entity 
+          id="car-model" 
+          gltf-model="./assets/scene.glb" 
+          scale="0.25 0.25 0.25" 
+          position="-1 0.1 -0.5" 
+          rotation="0 135 0" 
+          drift-entry>
+        </a-entity>
+      </a-entity>
     </a-marker>
+    
     <a-entity camera></a-entity>
   </a-scene>
   
   <!-- Debug and Controls -->
   <div id="debug-info">
-    <p>AR Racing Drift</p>
+    <p>AR Racing Drift - Cube Edition</p>
     <p id="debug-message">Waiting for marker...</p>
     <div class="debug-heading">Marker:</div>
     <p>Status: <span id="marker-status">Hidden</span></p>
