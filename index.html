@@ -133,10 +133,26 @@
     });
     
     AFRAME.registerComponent('moving-road', {
+      schema: {
+        speed: {type: 'number', default: 1.0}
+      },
+      init: function() {
+        // Create texture for road with lines
+        this.roadTexture = new THREE.TextureLoader().load('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAABGdBTUEAALGPC/xhBQAAAAFzUkdCAK7OHOkAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAABIFJREFUeNrt3T1oFEEcBfD3do+gEBUU8aMSBFGwE0FBxCKFjVjYWFkJKdLZWFoJVnZiY2MhiGBhYSMIFmJhYRONRkHFaCSKH0k07kx2xmQvyWV3Z5O9y/zeK3Lcu72d+d/M7MztriAiIiIiIiIiIiIiIiIiIiIiIiIiImoDAzgKYAeADTZmAJiK5GjL2Z8TZwAf2Ox78xhxZ54Fsi+nbxXAeQB9AD4D6APwAcBTD3k3PTl9IYA9AG7a2GHjHoBBAOcyzmMAdNtj0h7v2jHxGcCnjHPptmM39gIwdXUcwBMPxakNHwBscnV8VePZO5JxQdcA6ALwo4WcPgA4AOBuxnm8AnAOwIAtwH12FnzZ1tlZdrPAHxvrYkytyasDNwt02VmiCuCRgDy2AbhgYwjAWxufANwHMGbPPQDgr50pPwI4DuB1xnn12Vjv4i+AcwH3/9/JQ/VYuDTlvC0u/ot8FsA4gDcAzgIYtQPqMoBXKb/zVcbPAVPZoA7+OIDNVc5xvU23zTZKEp79VQA3APQCuFUlnwEAJ6vkMV7aWOExR8KSBgFn/zyAnQDOAriEYkPZVQBvAZwCcNH++wmAtxnnJWEm6WJzK8BmG+UALtjOugPAGI33/XMAngPYB2Av/t2m9QM4mnFeEvpXUiXMsRsAnMrpItMAuoDnARzMOI9JAC8B7APwGsBxFPeR8zYu5nAdkkYAxu4sTwL4VKXg4wDeATiG4pntUgAn7GCbzTOBERMJlzFl496U7ydKA2u+zYSxAA7mlUCn6CQzABOwAJSABaAELAAlYAEoAQtACVgASsACUAIWgBKwAJSABaAELAAlYAEoAQtACVgASsACUAIWgBKwAJSABaAELAAlYAEoAQtACVgASsACUAIWgBKwAJSABaAEnXQP7Z8A7gC40YYcbqM4C/lMzrm2K4Z9OX2TKA7hzzqXCRSTTJrJYQDFOUKdEKMoDtfPOpdxG80ciYy0GZuRJoQTQhqQMCGuEmZs56SVYRrAeUiYB9jtKj8D4JK9yFEUczOnXbTwXsB2+/WpAC4H5PIUwGEUZ/5ktRfwEcBhAHdznCF3oZgpMy3HXCZTtrfmMjsBfLO9tmJnhEl7ofMAjjtepJGEwVKXgMklZW6jj3cUC7eRcKPP9xSIuQY5XLEzLQ4DuJLyO3dRHOL+uc0C6AGw1T4u2+dyBN9RzHYdyziPvQC22MtZ1SFTYmTNXk8BFh+SsEzAQ8yZg0PAsQBPcCYT5gBkOgLqMy8fZI4W+OPjJFMWgBKwAJSABaAELAAlYAEoAQtACVgASsACUIKsiuDjdOxQZoB6t4E9noKZEQJ87nGXw0uNnTQlTKd9bcQSp4SvjTmtgJzWoXu1PzGv/XkvKwkrAONkFhADME7mAcxnKlrjAZgVnMtSzNi8fD4HaOzxwocltTcGkGcB8n6DKQ9L6ozxwDyMp2Vg+c2hwhfCXGxLbpQxS2xnLiMWwBKbC0Q5/u1lhWAixqIQCTFvx0Cch3ndWYjwzPcYQvEQ8MzHaJwXmBERERERERERERERERERERERERERERGtKX8BNwUeWZB74pcAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjEtMTAtMjlUMDE6MTc6NDcrMDA6MDDiWEqpAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDIxLTEwLTI5VDAxOjE3OjQ3KzAwOjAwkwXyFQAAAABJRU5ErkJggg==');
+        this.roadTexture.wrapS = THREE.RepeatWrapping;
+        this.roadTexture.wrapT = THREE.RepeatWrapping;
+        this.roadTexture.repeat.set(1, 5);
+        
+        // Apply texture to the road
+        this.el.setAttribute('material', {
+          src: this.roadTexture,
+          repeat: '1 5'
+        });
+      },
       tick: function (time, timeDelta) {
-        let road = this.el;
-        let offset = (time / 1000) % 1;
-        road.setAttribute('material', 'offset', `0 ${offset}`);
+        // Calculate the offset for road texture animation
+        let offset = (time / 1000 * this.data.speed) % 1;
+        this.el.setAttribute('material', 'offset', `0 ${offset}`);
       }
     });
   </script>
@@ -156,6 +172,18 @@
       z-index: 9999;
     }
     #loading-message, #start-drift-button { display: none; }
+    
+    #start-drift-button {
+      cursor: pointer;
+      font-size: 18px;
+      font-weight: bold;
+      padding: 15px 30px;
+      border: none;
+      background: linear-gradient(to bottom, #ff9500, #ff5e3a);
+      color: white;
+      border-radius: 30px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
     
     #debug-info {
       position: fixed;
@@ -212,11 +240,11 @@
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
     <!-- Image-based marker instead of barcode -->
     <a-marker type="pattern" url="./pattern-qr.patt" marker-listener>
-      <!-- Fixed path to the car model -->
+      <!-- Car model with correct path -->
       <a-entity gltf-model="./assets/scene.glb" scale="0.5 0.5 0.5" position="-2 0 -1" rotation="0 45 0" drift-entry></a-entity>
       
-      <!-- Fixed road rotation to make it horizontal -->
-      <a-plane position="0 -0.02 0" rotation="-90 0 0" width="2" height="5" material="color: #333; repeat: 1 5;" moving-road></a-plane>
+      <!-- Improved road with proper positioning and material -->
+      <a-plane position="0 -0.1 0" rotation="-90 0 0" width="3" height="6" color="#333" moving-road="speed: 0.5"></a-plane>
     </a-marker>
     <a-entity camera></a-entity>
   </a-scene>
