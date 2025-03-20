@@ -212,7 +212,10 @@
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
     <!-- Image-based marker instead of barcode -->
     <a-marker type="pattern" url="./pattern-qr.patt" marker-listener>
+      <!-- Fixed path to the car model -->
       <a-entity gltf-model="./assets/scene.glb" scale="0.5 0.5 0.5" position="-2 0 -1" rotation="0 45 0" drift-entry></a-entity>
+      
+      <!-- Fixed road rotation to make it horizontal -->
       <a-plane position="0 -0.02 0" rotation="-90 0 0" width="2" height="5" material="color: #333; repeat: 1 5;" moving-road></a-plane>
     </a-marker>
     <a-entity camera></a-entity>
