@@ -6,46 +6,15 @@
     <title>WebAR JDM Cube</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/1.7.2/aframe/build/aframe-ar.min.js"></script>
-    <script>
-        AFRAME.registerComponent('road-animation', {
-            tick: function (time, timeDelta) {
-                let mesh = this.el.getObject3D('mesh');
-                if (mesh && mesh.material && mesh.material.map) {
-                    mesh.material.map.offset.y -= timeDelta * 0.0005; // Moves texture downwards
-                }
-            }
-        });
-
-        // Drift button handler for car animation
-        function driftCar() {
-            let car = document.querySelector("#car");
-            car.setAttribute("animation", "property: position; to: 0 0.1 -0.5; dur: 1000; easing: easeOutQuad");
-            setTimeout(() => {
-                car.setAttribute("animation", "property: rotation; to: 0 180 0; dur: 500");
-            }, 1000);
-        }
-    </script>
 </head>
 <body style="margin: 0; overflow: hidden;">
     <a-scene embedded arjs>
         <!-- Marker changed to default HIRO marker -->
         <a-marker preset="hiro">
-            <!-- Debug Box to check if the marker is detected -->
+            <!-- Debug Box to check if marker is detected -->
             <a-box position="0 0.2 0" color="red"></a-box>
-
-            <!-- Road positioned above marker for visibility -->
-            <a-plane id="road" width="1" height="2" position="0 0.1 0" rotation="-90 0 0"
-                material="color: gray; side: double" road-animation></a-plane>
-
-            <!-- Car Model on the road -->
-            <a-entity id="car" gltf-model="assets/scene.glb" position="0 0.2 0" scale="0.1 0.1 0.1"></a-entity>
         </a-marker>
         <a-entity camera></a-entity>
     </a-scene>
-
-    <!-- Drift button to trigger car movement -->
-    <button onclick="driftCar()" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 10px 20px; font-size: 20px;">
-        Drift
-    </button>
 </body>
 </html>
