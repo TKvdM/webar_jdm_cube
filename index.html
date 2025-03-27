@@ -3,20 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR.js Test</title>
+    <title>WebAR JDM Cube</title>
+
+    <!-- A-Frame and AR.js libraries -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <!-- Use a different, stable AR.js version -->
     <script src="https://cdn.jsdelivr.net/gh/jeromeetienne/AR.js/aframe/dist/aframe-ar.js"></script>
+
+    <script>
+        // Registering the road animation component
+        AFRAME.registerComponent('road-animation', {
+            tick: function (time, timeDelta) {
+                let mesh = this.el.getObject3D('mesh');
+                if (mesh && mesh.material && mesh.material.map) {
+                    mesh.material.map.offset.y -= timeDelta * 0.0005; // Moves texture downwards
+                }
+            }
+        });
+
+        // Drift function to move the car
+        function driftCar() {
+            let car = document.querySelector("#car");
+            car.setAttribute("animation", "property: position; to: 0 0.1 -0.5; dur: 1000; easing: easeOutQuad");
+            setTimeout(() => {
+                car.setAttribute("animation", "property: rotation; to: 0 180 0; dur: 500");
+            }, 1000);
+        }
+    </script>
 </head>
 <body style="margin: 0; overflow: hidden;">
-    <a-scene embedded arjs>
-        <!-- Hiro marker, check if it's detected -->
+    <!-- A-Frame scene with AR.js -->
+    <a-scene embedded arjs="sourceType: webcam;">
+        <!-- Hiro marker to trigger AR scene -->
         <a-marker preset="hiro">
-            <!-- Debug box -->
-            <a-box position="0 0.2 0" color="red"></a-box>
+            
+            <!-- Road with animated texture -->
+            <a-plane id="road" width="1" height="2" position="0 -0.1 0" rotation="-90 0 0" material="color: gray; src: assets/Material.011_baseColor.png; repeat: 1 3; side: double" road-animation></a-plane>
+
+            <!-- Car Model on the road -->
+            <a-entity id="car" gltf-model="assets/scene.glb" position="0 -0.05 0" scale="0.1 0.1 0.1"></a-entity>
         </a-marker>
-        <!-- Camera entity -->
+
+        <!-- Camera for the AR scene -->
         <a-entity camera></a-entity>
     </a-scene>
+
+    <!-- Drift Button -->
+    <button onclick="driftCar()" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 10px 20px; font-size: 20px;">Drift</button>
 </body>
 </html>
