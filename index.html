@@ -1,326 +1,94 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AR Drifting Car - Cube Display</title>
-  
-  <!-- Load A-Frame and AR.js from a reliable source -->
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
-  
-  <script>
-    // Enhanced Debugging Components
-    AFRAME.registerComponent('advanced-marker-debug', {
-      init: function() {
-        console.log('Marker debug component initialized');
-        
-        this.el.addEventListener('markerFound', () => {
-          console.log('✅ MARKER FOUND: Scene should now be visible');
-          document.getElementById('debug-message').textContent = "Marker detected successfully!";
-          document.getElementById('marker-status').textContent = "Visible";
-          document.getElementById('start-drift-button').style.display = "block";
-        });
-
-        this.el.addEventListener('markerLost', () => {
-          console.log('❌ Marker Lost');
-          document.getElementById('debug-message').textContent = "Marker lost. Reposition camera.";
-          document.getElementById('marker-status').textContent = "Hidden";
-          document.getElementById('start-drift-button').style.display = "none";
-        });
-      }
-    });
-
-    AFRAME.registerComponent('model-load-debug', {
-      init: function() {
-        console.log('Model Source:', this.el.getAttribute('gltf-model'));
-        
-        this.el.addEventListener('model-loaded', (event) => {
-          console.log('✅ Model Loaded Successfully');
-          console.log('Model Attributes:', {
-            position: this.el.getAttribute('position'),
-            rotation: this.el.getAttribute('rotation'),
-            scale: this.el.getAttribute('scale')
-          });
-        });
-
-        this.el.addEventListener('model-error', (event) => {
-          console.error('❌ Model Loading Error:', event.detail);
-        });
-      }
-    });
-
-    window.onload = function() {
-      console.log("Page loaded. Click anywhere to start AR.");
-      document.getElementById('loading-message').style.display = 'block';
-      
-      // Check if this page was loaded via QR code scan
-      const isQRCodeScan = checkIfQRCodeScan();
-      
-      if (isQRCodeScan) {
-        startARExperience();
-      } else {
-        document.getElementById('click-message').style.display = 'block';
-        document.addEventListener('click', function() {
-          startARExperience();
-        }, { once: true });
-      }
-    };
-    
-    function checkIfQRCodeScan() {
-      // Add a URL parameter to detect when the page is loaded via QR scan
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.has('qr');
-    }
-    
-    function startARExperience() {
-      console.log("Starting AR session");
-      document.getElementById('loading-message').style.display = 'none';
-      document.getElementById('click-message').style.display = 'none';
-      
-      // Request device motion and orientation permissions
-      if (typeof DeviceOrientationEvent !== 'undefined' && 
-          typeof DeviceOrientationEvent.requestPermission === 'function') {
-        DeviceOrientationEvent.requestPermission()
-          .then(response => {
-            if (response == 'granted') {
-              console.log('Device orientation permission granted');
-              initGyroscopeControl();
-            }
-          })
-          .catch(console.error);
-      } else {
-        // For non-iOS devices or iOS < 13
-        console.log('Device orientation permission not needed or not available');
-        initGyroscopeControl();
-      }
-    }
-    
-    function initGyroscopeControl() {
-      const camera = document.querySelector('a-entity[camera]');
-      let baseRotation = { x: 0, y: 0, z: 0 };
-      let initialOrientationRecorded = false;
-      
-      window.addEventListener('deviceorientation', function(event) {
-        if (!initialOrientationRecorded) {
-          // Record initial orientation as base
-          baseRotation.x = event.beta || 0;
-          baseRotation.y = event.gamma || 0;
-          baseRotation.z = event.alpha || 0;
-          initialOrientationRecorded = true;
-          document.getElementById('gyro-status').textContent = 'Active';
+    <meta charset="utf-8">
+    <title>AR Car Demo</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ar.js@2.2.2/aframe/build/aframe-ar.min.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
         }
-        
-        // Calculate the compensated rotation to keep level perspective
-        const compensatedRotation = camera.getAttribute('rotation') || {x: 0, y: 0, z: 0};
-        compensatedRotation.z = -(event.gamma || 0) + baseRotation.y;
-        
-        // Limit the compensation to avoid extreme values
-        compensatedRotation.z = Math.max(-45, Math.min(45, compensatedRotation.z));
-        
-        // Apply the compensated rotation
-        camera.setAttribute('rotation', compensatedRotation);
-      });
-    }
-    
-    function startDrift() {
-      let car = document.querySelector("[drift-entry]");
-      car.setAttribute('animation', {
-        property: 'position',
-        to: '0 0.1 0',  // Position just above the road
-        dur: 1500,
-        easing: 'easeOutQuad',
-        from: '-1 0.1 -0.5'
-      });
-      car.setAttribute('animation__rotation', {
-        property: 'rotation',
-        to: '0 90 0',  // Car facing along the road
-        dur: 1500,
-        easing: 'easeOutQuad',
-        from: '0 135 0'
-      });
-      setTimeout(() => {
-        car.setAttribute('showroom-animation', '');
-      }, 1600);
-      document.getElementById("start-drift-button").style.display = "none";
-    }
-    
-    AFRAME.registerComponent('showroom-animation', {
-      tick: function (time, timeDelta) {
-        let angle = Math.sin(time / 500) * 5; // Slight left-right sway
-        let bounce = Math.sin(time / 300) * 0.02; // Slight engine vibration
-        this.el.setAttribute('rotation', `0 ${90 + angle} 0`);  // Maintain 90 degree base rotation
-        this.el.setAttribute('position', `0 ${0.1 + bounce} 0`);  // Keep height consistent
-      }
-    });
-    
-    AFRAME.registerComponent('moving-road', {
-      schema: {
-        speed: {type: 'number', default: 1.0}
-      },
-      init: function() {
-        // Create material with road texture
-        this.el.setAttribute('material', {
-          color: '#333',
-          src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAMAAABrrFhUAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyNpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDYuMC1jMDAyIDc5LjE2NDQ4OCwgMjAyMC8wNy8xMC0yMjowNjo1MyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDIyLjAgKFdpbmRvd3MpIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjVCOTk3NDQ3M0JFQjExRUI5OERCRDE3MDA1RDIzREVEIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjVCOTk3NDQ4M0JFQjExRUI5OERCRDE3MDA1RDIzREVEIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NUI5OTc0NDUzQkVCMTFFQjk4REJEMTcwMDVEMjNERUQiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NUI5OTc0NDYzQkVCMTFFQjk4REJEMTcwMDVEMjNERUQiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz4SBMh9AAAABlBMVEU9PT0AAADEuYnFAAAAAnRSTlP/AOW3MEoAAACgSURBVHja7MExAQAAAMKg9U9tCj+gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOA0qnUAATtT63IAAAAASUVORK5CYII=',
-          repeat: '1 5'
-        });
-      },
-      tick: function (time, timeDelta) {
-        // Calculate the offset for road texture animation
-        let offset = (time / 1000 * this.data.speed) % 1;
-        this.el.setAttribute('material', 'offset', `0 ${offset}`);
-      }
-    });
-  </script>
-  
-  <style>
-    #loading-message, #click-message, #start-drift-button {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.8);
-      color: white;
-      padding: 20px;
-      border-radius: 10px;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      z-index: 9999;
-    }
-    #loading-message, #start-drift-button { display: none; }
-    
-    #start-drift-button {
-      cursor: pointer;
-      font-size: 18px;
-      font-weight: bold;
-      padding: 15px 30px;
-      border: none;
-      background: linear-gradient(to bottom, #ff9500, #ff5e3a);
-      color: white;
-      border-radius: 30px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    }
-    
-    #debug-info {
-      position: fixed;
-      bottom: 10px;
-      left: 10px;
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 10px;
-      border-radius: 5px;
-      font-family: monospace;
-      font-size: 12px;
-      z-index: 1000;
-    }
-    
-    .debug-heading {
-      font-weight: bold;
-      margin-top: 5px;
-    }
-    
-    #qr-instructions {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 10px;
-      border-radius: 5px;
-      font-family: Arial, sans-serif;
-      font-size: 14px;
-      z-index: 1000;
-      max-width: 250px;
-    }
-  </style>
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+        }
+    </style>
 </head>
-<body style="margin: 0; overflow: hidden;">
-  <!-- Click message -->
-  <div id="click-message">Click anywhere to start the AR experience<br><small>Camera and motion sensor access required</small></div>
-  
-  <!-- Loading message -->
-  <div id="loading-message">
-    <h2>Starting AR Experience</h2>
-    <p>Please allow camera access when prompted</p>
-  </div>
-  
-  <!-- Start Drift Button -->
-  <button id="start-drift-button" onclick="startDrift()">Start Drift</button>
-  
-  <!-- QR code instructions -->
-  <div id="qr-instructions">
-    Point your camera at the QR code inside the cube. The car will appear on the floor of the cube.
-  </div>
-  
-  <!-- A-Frame scene -->
-  <a-scene 
-    embedded 
-    arjs="sourceType: webcam; 
-           debugUIEnabled: false; 
-           detectionMode: mono_and_matrix; 
-           matrixCodeType: 3x3;
-           sourceWidth: 1280; 
-           sourceHeight: 960;
-           displayWidth: 1280; 
-           displayHeight: 960"
-  >
-    <!-- Marker with adjusted position and rotation -->
-    <a-marker 
-      type="pattern" 
-      url="https://raw.githubusercontent.com/TKvdM/webar_jdm_cube/main/pattern-qr.patt"
-      smooth="true"
-      smoothCount="10"
-      smoothTolerance="0.01"
-      smoothThreshold="5"
-      advanced-marker-debug
-    >
-      <!-- Scene container with adjusted positioning -->
-      <a-entity id="scene-container" 
-        position="0 0 0" 
-        rotation="-90 0 0"  <!-- Rotate to flatten perspective -->
-      >
-        <!-- Road with adjusted positioning -->
-        <a-plane 
-          id="road" 
-          position="0 0 0" 
-          rotation="-90 0 0"  <!-- Ensure road is horizontal -->
-          width="1.5" 
-          height="2.5" 
-          color="#333333"
-          moving-road="speed: 0.3"
-        ></a-plane>
-        
-        <!-- Car model with precise positioning -->
-        <a-entity 
-          id="car-model" 
-          gltf-model="https://raw.githubusercontent.com/TKvdM/webar_jdm_cube/main/assets/scene.glb" 
-          scale="0.25 0.25 0.25" 
-          position="-1 0.1 -0.5" 
-          rotation="0 135 0" 
-          drift-entry
-          model-load-debug
-        >
-        </a-entity>
-      </a-entity>
-    </a-marker>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        Loading AR Experience... Please allow camera access
+    </div>
 
-    <!-- Camera with adjusted settings -->
-    <a-entity 
-      camera 
-      look-controls 
-      position="0 1.6 0"  <!-- Standard camera height -->
-    ></a-entity>
-  </a-scene>
-  
-  <!-- Debug and Controls -->
-  <div id="debug-info">
-    <p>AR Racing Drift - Cube Edition</p>
-    <p id="debug-message">Waiting for marker...</p>
-    <div class="debug-heading">Marker:</div>
-    <p>Status: <span id="marker-status">Hidden</span></p>
-    <div class="debug-heading">Gyroscope:</div>
-    <p id="gyro-status">Initializing...</p>
-  </div>
+    <a-scene 
+        embedded 
+        arjs="sourceType: webcam; 
+               debugUIEnabled: false; 
+               detectionMode: mono; 
+               trackingMethod: best;"
+        vr-mode-ui="enabled: false"
+    >
+        <!-- Asset Management -->
+        <a-assets timeout="10000">
+            <a-asset-item id="car-model" src="https://raw.githubusercontent.com/TKvdM/webar_jdm_cube/main/assets/scene.glb"></a-asset-item>
+        </a-assets>
+
+        <!-- Marker -->
+        <a-marker preset="hiro">
+            <a-entity 
+                gltf-model="#car-model"
+                position="0 0 0"
+                rotation="0 0 0"
+                scale="0.5 0.5 0.5"
+                animation__rotate="property: rotation; 
+                                   to: 0 360 0; 
+                                   loop: true; 
+                                   dur: 10000"
+            >
+            </a-entity>
+
+            <!-- Ground Plane -->
+            <a-plane 
+                position="0 0 0" 
+                rotation="-90 0 0" 
+                width="4" 
+                height="4" 
+                color="#7BC8A4"
+            ></a-plane>
+        </a-marker>
+
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        window.addEventListener('load', function() {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            
+            // Remove loading overlay when scene is loaded
+            document.querySelector('a-scene').addEventListener('loaded', function () {
+                loadingOverlay.style.display = 'none';
+            });
+
+            // Log any model loading errors
+            const carModel = document.querySelector('[gltf-model]');
+            carModel.addEventListener('model-loaded', function() {
+                console.log('Car model loaded successfully');
+            });
+            carModel.addEventListener('model-error', function(error) {
+                console.error('Car model loading error:', error);
+            });
+        });
+    </script>
 </body>
 </html>
