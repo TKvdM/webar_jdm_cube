@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebAR JDM Cube</title>
+    <title>AR.js Test</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/1.7.2/aframe/build/aframe-ar.min.js"></script>
+    <!-- Updated AR.js version -->
+    <script src="https://cdn.jsdelivr.net/gh/jeromeetienne/AR.js/aframe/dist/aframe-ar.js"></script>
 </head>
 <body style="margin: 0; overflow: hidden;">
     <a-scene embedded arjs>
-        <!-- Marker changed to default HIRO marker -->
+        <!-- Testing with Hiro marker, use 'preset="hiro"' -->
         <a-marker preset="hiro">
             <!-- Debug Box to check if marker is detected -->
             <a-box position="0 0.2 0" color="red"></a-box>
