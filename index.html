@@ -3,22 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebAR Test</title>
-    <!-- A-Frame -->
+    <title>Web AR Driving Model</title>
+
+    <!-- A-Frame (v1.4.0) -->
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <!-- AR.js (Ensure you use the correct version, AR.js 1.7.2 works well with A-Frame 1.4.0) -->
-    <script src="https://cdn.jsdelivr.net/gh/jeromeetienne/AR.js@1.7.2/aframe/build/aframe-ar.js"></script>
+
+    <!-- AR.js (v2.0) -->
+    <script src="https://cdn.jsdelivr.net/gh/jeromeetienne/AR.js@2.0/aframe/build/aframe-ar.js"></script>
+
 </head>
 <body style="margin: 0; overflow: hidden;">
-    <!-- A-Frame Scene with AR.js -->
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;">
-        <!-- Marker -->
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+
+        <!-- Hiro marker -->
         <a-marker preset="hiro">
-            <!-- Simple 3D Object (replace this with your car later) -->
-            <a-box position="0 0.5 0" material="color: red;"></a-box>
+            <!-- Your GLTF model (replace with your own) -->
+            <a-gltf-model id="car" src="url(path/to/your/scene.glb)" scale="0.5 0.5 0.5" position="0 0 0" rotation="0 0 0">
+                <!-- Adding simple animation to the car -->
+                <a-animation
+                    attribute="position"
+                    to="10 0 0"
+                    dur="5000"
+                    repeat="indefinite">
+                </a-animation>
+            </a-gltf-model>
         </a-marker>
+
         <!-- Camera -->
         <a-entity camera></a-entity>
+
     </a-scene>
 </body>
 </html>
