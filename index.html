@@ -1,94 +1,103 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>AR Car Demo</title>
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ar.js@2.2.2/aframe/build/aframe-ar.min.js"></script>
-    <style>
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-        }
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: black;
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            font-family: Arial, sans-serif;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AR Drifting Car - Cube Display</title>
+  
+  <!-- Load A-Frame and AR.js from a reliable source -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
+  
+  <script>
+    window.onload = function() {
+      document.querySelector('a-scene').addEventListener('loaded', function() {
+        console.log('a-scene loaded');
+      });
+    };
+
+    AFRAME.registerComponent('markerhandler', {
+      init: function () {
+        this.el.addEventListener('markerFound', () => {
+          console.log('Marker Found');
+        });
+
+        this.el.addEventListener('markerLost', () => {
+          console.log('Marker Lost');
+        });
+      }
+    });
+
+    function startDrift() {
+      let car = document.querySelector("[drift-entry]");
+      car.setAttribute('animation', {
+        property: 'position',
+        to: '0 0.1 0',
+        dur: 1500,
+        easing: 'easeOutQuad',
+        from: '-1 0.1 -0.5'
+      });
+      car.setAttribute('animation__rotation', {
+        property: 'rotation',
+        to: '0 90 0',
+        dur: 1500,
+        easing: 'easeOutQuad',
+        from: '0 135 0'
+      });
+    }
+  </script>
+  
+  <style>
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+    }
+    #start-drift-button {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+  </style>
 </head>
 <body>
-    <div class="loading-overlay" id="loadingOverlay">
-        Loading AR Experience... Please allow camera access
-    </div>
+  <button id="start-drift-button" onclick="startDrift()">Start Drift</button>
 
-    <a-scene 
-        embedded 
-        arjs="sourceType: webcam; 
-               debugUIEnabled: false; 
-               detectionMode: mono; 
-               trackingMethod: best;"
-        vr-mode-ui="enabled: false"
+  <a-scene 
+    embedded 
+    arjs="sourceType: webcam; 
+           debugUIEnabled: false; 
+           detectionMode: mono_and_matrix; 
+           matrixCodeType: 3x3;"
+  >
+    <!-- Custom marker -->
+    <a-marker 
+      type="pattern" 
+      url="https://raw.githubusercontent.com/TKvdM/webar_jdm_cube/main/pattern-qr.patt"
+      markerhandler
+      smooth="true"
+      smoothCount="10"
+      smoothTolerance="0.01"
+      smoothThreshold="5"
     >
-        <!-- Asset Management -->
-        <a-assets timeout="10000">
-            <a-asset-item id="car-model" src="https://raw.githubusercontent.com/TKvdM/webar_jdm_cube/main/assets/scene.glb"></a-asset-item>
-        </a-assets>
+      <!-- Car model -->
+      <a-entity 
+        gltf-model="https://raw.githubusercontent.com/TKvdM/webar_jdm_cube/main/assets/scene.glb" 
+        scale="0.25 0.25 0.25" 
+        position="-1 0.1 -0.5" 
+        rotation="0 135 0" 
+        drift-entry
+      >
+      </a-entity>
+    </a-marker>
 
-        <!-- Marker -->
-        <a-marker preset="hiro">
-            <a-entity 
-                gltf-model="#car-model"
-                position="0 0 0"
-                rotation="0 0 0"
-                scale="0.5 0.5 0.5"
-                animation__rotate="property: rotation; 
-                                   to: 0 360 0; 
-                                   loop: true; 
-                                   dur: 10000"
-            >
-            </a-entity>
-
-            <!-- Ground Plane -->
-            <a-plane 
-                position="0 0 0" 
-                rotation="-90 0 0" 
-                width="4" 
-                height="4" 
-                color="#7BC8A4"
-            ></a-plane>
-        </a-marker>
-
-        <a-entity camera></a-entity>
-    </a-scene>
-
-    <script>
-        window.addEventListener('load', function() {
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            
-            // Remove loading overlay when scene is loaded
-            document.querySelector('a-scene').addEventListener('loaded', function () {
-                loadingOverlay.style.display = 'none';
-            });
-
-            // Log any model loading errors
-            const carModel = document.querySelector('[gltf-model]');
-            carModel.addEventListener('model-loaded', function() {
-                console.log('Car model loaded successfully');
-            });
-            carModel.addEventListener('model-error', function(error) {
-                console.error('Car model loading error:', error);
-            });
-        });
-    </script>
+    <a-entity camera></a-entity>
+  </a-scene>
 </body>
 </html>
