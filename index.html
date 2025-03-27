@@ -15,11 +15,9 @@
         this.road = this.el;
       },
       tick: function(time, timeDelta) {
-        // Create a continuous scrolling effect for the road
         if (this.road) {
-          const currentPosition = this.road.getAttribute('position');
-          const newZ = (currentPosition.z + 0.01) % 10;
-          this.road.setAttribute('position', `0 0 ${-newZ}`);
+          const uvOffset = (time / 1000) % 1; 
+          this.road.setAttribute("material", "offset", `0 ${uvOffset}`);
         }
       }
     });
@@ -30,36 +28,23 @@
       },
       init: function() {
         this.car = this.el;
-        this.startPosition = {x: -1, y: 0.1, z: -0.5};
-        this.endPosition = {x: 0, y: 0.1, z: 0};
       },
       startDrift: function() {
         if (this.data.isAnimating) return;
-        
-        // Rotation and position animation
+
+        // Drifting animation
         this.car.setAttribute('animation', {
           property: 'position',
-          to: `${this.endPosition.x} ${this.endPosition.y} ${this.endPosition.z}`,
+          to: '0 0.1 0',
           dur: 1500,
-          easing: 'easeOutQuad',
-          from: `-1 0.1 -0.5`
+          easing: 'easeOutQuad'
         });
         
         this.car.setAttribute('animation__rotation', {
           property: 'rotation',
           to: '0 90 0',
           dur: 1500,
-          easing: 'easeOutQuad',
-          from: '0 135 0'
-        });
-
-        // Continuous driving animation
-        this.car.setAttribute('animation__drive', {
-          property: 'position.z',
-          to: 10,
-          dur: 10000,
-          easing: 'linear',
-          loop: true
+          easing: 'easeOutQuad'
         });
 
         this.data.isAnimating = true;
@@ -68,7 +53,11 @@
 
     function startDrift() {
       const car = document.querySelector("[drift-animation]");
-      car.components['drift-animation'].startDrift();
+      if (car && car.components['drift-animation']) {
+        car.components['drift-animation'].startDrift();
+      } else {
+        console.error("Drift animation component not found.");
+      }
     }
   </script>
   
@@ -94,13 +83,7 @@
 <body>
   <button id="start-drift-button" onclick="startDrift()">Start Drift</button>
   
-  <a-scene 
-    embedded 
-    arjs="sourceType: webcam; 
-           debugUIEnabled: false; 
-           detectionMode: mono_and_matrix; 
-           matrixCodeType: 3x3;"
-  >
+  <a-scene embedded arjs>
     <!-- Road -->
     <a-plane 
       road-animation 
@@ -109,13 +92,12 @@
       rotation="-90 0 0" 
       color="#555555" 
       position="0 0 0"
-      repeat="1 5"
     ></a-plane>
 
-    <!-- Custom marker -->
+    <!-- Marker -->
     <a-marker 
       type="pattern" 
-      url="./pattern-qr.patt"
+      url="https://raw.githubusercontent.com/TKvdM/webar_jdm_cube/main/pattern-qr.patt"
       smooth="true"
       smoothCount="10"
       smoothTolerance="0.01"
@@ -123,13 +105,12 @@
     >
       <!-- Car model -->
       <a-entity 
-        gltf-model="./assets/scene.glb" 
+        gltf-model="https://cdn.jsdelivr.net/gh/TKvdM/webar_jdm_cube@main/assets/scene.glb" 
         scale="0.25 0.25 0.25" 
         position="-1 0.1 -0.5" 
         rotation="0 135 0" 
         drift-animation
-      >
-      </a-entity>
+      ></a-entity>
     </a-marker>
     
     <a-entity camera></a-entity>
