@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebAR JDM Cube</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ar.js/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/1.7.2/aframe/build/aframe-ar.min.js"></script>
     <script>
         // For road animation (moves texture)
         AFRAME.registerComponent('road-animation', {
@@ -29,7 +29,7 @@
 </head>
 <body style="margin: 0; overflow: hidden;">
     <!-- A-Frame AR.js scene with AR.js setup -->
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best; cameraParametersUrl: https://raw.githubusercontent.com/jeromeetienne/AR.js/master/aframe/examples/marker-training-parameters/hiro.patt;">
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;">
         <!-- Hiro marker preset -->
         <a-marker preset="hiro">
             <!-- Road positioned at the bottom -->
