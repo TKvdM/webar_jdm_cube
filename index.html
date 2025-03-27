@@ -1,119 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AR Drifting Car - Cube Display</title>
-  
-  <!-- Load A-Frame and AR.js from a reliable source -->
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
-  
-  <script>
-    AFRAME.registerComponent('road-animation', {
-      init: function() {
-        this.road = this.el;
-      },
-      tick: function(time, timeDelta) {
-        if (this.road) {
-          const uvOffset = (time / 1000) % 1; 
-          this.road.setAttribute("material", "offset", `0 ${uvOffset}`);
-        }
-      }
-    });
-
-    AFRAME.registerComponent('drift-animation', {
-      schema: {
-        isAnimating: {type: 'boolean', default: false}
-      },
-      init: function() {
-        this.car = this.el;
-      },
-      startDrift: function() {
-        if (this.data.isAnimating) return;
-
-        // Drifting animation
-        this.car.setAttribute('animation', {
-          property: 'position',
-          to: '0 0.1 0',
-          dur: 1500,
-          easing: 'easeOutQuad'
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAR JDM Cube</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.rawgit.com/jeromeetienne/ar.js/1.7.2/aframe/build/aframe-ar.min.js"></script>
+    <script>
+        AFRAME.registerComponent('road-animation', {
+            tick: function (time, timeDelta) {
+                let mesh = this.el.getObject3D('mesh');
+                if (mesh) {
+                    mesh.material.map.offset.y -= timeDelta * 0.0005; // Moves texture downwards
+                }
+            }
         });
         
-        this.car.setAttribute('animation__rotation', {
-          property: 'rotation',
-          to: '0 90 0',
-          dur: 1500,
-          easing: 'easeOutQuad'
-        });
-
-        this.data.isAnimating = true;
-      }
-    });
-
-    function startDrift() {
-      const car = document.querySelector("[drift-animation]");
-      if (car && car.components['drift-animation']) {
-        car.components['drift-animation'].startDrift();
-      } else {
-        console.error("Drift animation component not found.");
-      }
-    }
-  </script>
-  
-  <style>
-    body { 
-      margin: 0; 
-      overflow: hidden; 
-    }
-    #start-drift-button {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      padding: 10px 20px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-    }
-  </style>
+        function driftCar() {
+            let car = document.querySelector("#car");
+            car.setAttribute("animation", "property: position; to: 0 0.1 -0.5; dur: 1000; easing: easeOutQuad");
+            setTimeout(() => {
+                car.setAttribute("animation", "property: rotation; to: 0 180 0; dur: 500");
+            }, 1000);
+        }
+    </script>
 </head>
-<body>
-  <button id="start-drift-button" onclick="startDrift()">Start Drift</button>
-  
-  <a-scene embedded arjs>
-    <!-- Road -->
-    <a-plane 
-      road-animation 
-      width="10" 
-      height="50" 
-      rotation="-90 0 0" 
-      color="#555555" 
-      position="0 0 0"
-    ></a-plane>
-
-    <!-- Marker -->
-    <a-marker 
-      type="pattern" 
-      url="https://raw.githubusercontent.com/TKvdM/webar_jdm_cube/main/pattern-qr.patt"
-      smooth="true"
-      smoothCount="10"
-      smoothTolerance="0.01"
-      smoothThreshold="5"
-    >
-      <!-- Car model -->
-      <a-entity 
-        gltf-model="https://cdn.jsdelivr.net/gh/TKvdM/webar_jdm_cube@main/assets/scene.glb" 
-        scale="0.25 0.25 0.25" 
-        position="-1 0.1 -0.5" 
-        rotation="0 135 0" 
-        drift-animation
-      ></a-entity>
-    </a-marker>
+<body style="margin: 0; overflow: hidden;">
+    <a-scene embedded arjs>
+        <!-- Marker on the back wall of the physical cube -->
+        <a-marker type="pattern" url="pattern-qr.patt">
+            
+            <!-- Road positioned at the bottom of the physical cube -->
+            <a-plane id="road" width="1" height="2" position="0 -0.25 0" rotation="-90 0 0" material="src: assets/Material.011_baseColor.png; repeat: 1 3" road-animation></a-plane>
+            
+            <!-- Car Model on the road -->
+            <a-entity id="car" gltf-model="assets/scene.glb" position="0 -0.2 0" scale="0.1 0.1 0.1"></a-entity>
+        </a-marker>
+        <a-entity camera></a-entity>
+    </a-scene>
     
-    <a-entity camera></a-entity>
-  </a-scene>
+    <button onclick="driftCar()" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 10px 20px; font-size: 20px;">Drift</button>
 </body>
 </html>
