@@ -10,6 +10,43 @@
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
   
   <script>
+    // Enhanced Debugging Components
+    AFRAME.registerComponent('advanced-marker-debug', {
+      init: function() {
+        console.log('Marker debug component initialized');
+        
+        this.el.addEventListener('markerFound', () => {
+          console.log('✅ MARKER FOUND: Scene should now be visible');
+          document.getElementById('debug-message').textContent = "Marker detected successfully!";
+          document.getElementById('marker-status').textContent = "Visible";
+          document.getElementById('start-drift-button').style.display = "block";
+        });
+
+        this.el.addEventListener('markerLost', () => {
+          console.log('❌ Marker Lost');
+          document.getElementById('debug-message').textContent = "Marker lost. Reposition camera.";
+          document.getElementById('marker-status').textContent = "Hidden";
+          document.getElementById('start-drift-button').style.display = "none";
+        });
+      }
+    });
+
+    AFRAME.registerComponent('model-load-debug', {
+      init: function() {
+        console.log('Model load debug component initialized');
+        
+        this.el.addEventListener('model-loaded', (event) => {
+          console.log('✅ 3D Model loaded successfully');
+          document.getElementById('debug-message').textContent = "3D Model loaded!";
+        });
+        
+        this.el.addEventListener('model-error', (event) => {
+          console.error('❌ MODEL LOADING ERROR:', event.detail);
+          document.getElementById('debug-message').textContent = "Model loading failed!";
+        });
+      }
+    });
+
     window.onload = function() {
       console.log("Page loaded. Click anywhere to start AR.");
       document.getElementById('loading-message').style.display = 'block';
@@ -83,23 +120,6 @@
         camera.setAttribute('rotation', compensatedRotation);
       });
     }
-    
-    AFRAME.registerComponent('marker-listener', {
-      init: function () {
-        let marker = this.el;
-        let button = document.getElementById("start-drift-button");
-        marker.addEventListener('markerFound', function() {
-          button.style.display = "block";
-          document.getElementById('debug-message').textContent = "Marker detected!";
-          document.getElementById('marker-status').textContent = "Visible";
-        });
-        marker.addEventListener('markerLost', function() {
-          button.style.display = "none";
-          document.getElementById('debug-message').textContent = "Waiting for marker...";
-          document.getElementById('marker-status').textContent = "Hidden";
-        });
-      }
-    });
     
     function startDrift() {
       let car = document.querySelector("[drift-entry]");
@@ -234,11 +254,21 @@
   <!-- A-Frame scene -->
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
     <!-- Image-based marker using pattern -->
-    <a-marker type="pattern" url="./pattern-qr.patt" marker-listener>
+    <a-marker 
+      type="pattern" 
+      url="./pattern-qr.patt" 
+      advanced-marker-debug>
       <!-- Modified scene positioning for inside cube view -->
       <a-entity id="scene-container" position="0 0 0" rotation="0 0 0">
         <!-- Road positioned flat on bottom of cube -->
-        <a-plane id="road" position="0 0 0" rotation="0 0 0" width="1.5" height="2.5" moving-road="speed: 0.3"></a-plane>
+        <a-plane 
+          id="road" 
+          position="0 0 0" 
+          rotation="0 0 0" 
+          width="1.5" 
+          height="2.5" 
+          moving-road="speed: 0.3">
+        </a-plane>
         
         <!-- Car positioned above the road, with initial position for animation -->
         <a-entity 
@@ -247,7 +277,8 @@
           scale="0.25 0.25 0.25" 
           position="-1 0.1 -0.5" 
           rotation="0 135 0" 
-          drift-entry>
+          drift-entry
+          model-load-debug>
         </a-entity>
       </a-entity>
     </a-marker>
