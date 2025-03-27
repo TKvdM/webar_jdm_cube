@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AR.js Test</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <!-- Updated AR.js version -->
+    <!-- Use a different, stable AR.js version -->
     <script src="https://cdn.jsdelivr.net/gh/jeromeetienne/AR.js/aframe/dist/aframe-ar.js"></script>
 </head>
 <body style="margin: 0; overflow: hidden;">
     <a-scene embedded arjs>
-        <!-- Testing with Hiro marker, use 'preset="hiro"' -->
+        <!-- Hiro marker, check if it's detected -->
         <a-marker preset="hiro">
-            <!-- Debug Box to check if marker is detected -->
+            <!-- Debug box -->
             <a-box position="0 0.2 0" color="red"></a-box>
         </a-marker>
+        <!-- Camera entity -->
         <a-entity camera></a-entity>
     </a-scene>
 </body>
