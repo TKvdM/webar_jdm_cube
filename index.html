@@ -4,70 +4,116 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebAR Driving Experience</title>
-    <!-- A-Frame (latest stable version) -->
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <!-- AR.js with image tracking -->
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <!-- A-Frame (stable version) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aframe/1.3.0/aframe.min.js"></script>
+    <!-- AR.js with stable version -->
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.min.js"></script>
+    <!-- Add extra components for animation -->
+    <script>
+        // Custom component for continuous road scroll
+        AFRAME.registerComponent('road-scroll', {
+            schema: {
+                speed: {type: 'number', default: 1.0}
+            },
+            init: function () {
+                this.offset = 0;
+                this.material = this.el.getObject3D('mesh').material;
+            },
+            tick: function (time, deltaTime) {
+                if (!this.material || !this.material.map) return;
+                
+                // Calculate movement based on delta time for smooth animation
+                this.offset += (deltaTime / 1000) * this.data.speed;
+                // Reset when we've scrolled a full texture length to avoid floating point issues
+                if (this.offset > 1) this.offset -= 1;
+                
+                this.material.map.offset.set(0, this.offset);
+                this.material.needsUpdate = true;
+            }
+        });
+    </script>
     <style>
         body {
             margin: 0;
             overflow: hidden;
         }
-        .ar-button {
+        .ar-controls {
             position: absolute;
             bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 10px 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            z-index: 999;
+        }
+        .ar-button {
+            padding: 12px 20px;
             background: rgba(0, 0, 0, 0.7);
             color: white;
             border: none;
             border-radius: 5px;
-            z-index: 999;
+            font-weight: bold;
+        }
+        #loading-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
+    <div id="loading-message">Loading 3D model... Please wait.</div>
+    
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;" renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true;">
         <a-assets>
-            <a-asset-item id="car-model" src="assets/scene.glb"></a-asset-item>
-            <img id="road-texture" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=" />
+            <!-- Add timeout to ensure loading completes -->
+            <a-asset-item id="car-model" src="assets/scene.glb" response-type="arraybuffer"></a-asset-item>
+            
+            <!-- Actual road texture - asphalt with lane markings -->
+            <img id="road-texture" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAMAAAD04JH5AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6QTMxNkFCNzM1OUYxMTFFOUFFNzZDRUE0RUQ5ODA3OTAiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6QTMxNkFCNzQ1OUYxMTFFOUFFNzZDRUE0RUQ5ODA3OTAiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpBMzE2QUI3MTU5RjExMUU5QUU3NkNFQTRFRDk4MDc5MCIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpBMzE2QUI3MjU5RjExMUU5QUU3NkNFQTRFRDk4MDc5MCIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pv6HgpkAAAAMUExURSQkJCYmJigoKP///0w5W0oAAAAEdFJOU////wBAKqn0AAAA1UlEQVR42uzZ0Q6DIAwF0Fb4/29e4niYZJjF9qLE5D7tuYuGRFprrbXWWmuttZto06Bp0GnQNGhoXsG8gXkD8wbmDcwbmDcwb2DeEG0IN0QbgvF3YP//eoP5TLD6Gn66wXyZCPnRsJsfDfv7K2H7ZULU14n4/rFw4SfC+lR4bU8G5fuTgfsPBa43r2C+TIR8Ndjdj4b9/ZWw/TIh6utEfP9YuPATYX0qvLYnQ67fFLj/XuB68wrmDcwbmDcwb2DecNLA9UGn+eHR6U5orbXWWmut9QNtCDgD0IqY9QAAAABJRU5ErkJggg==" crossorigin="anonymous">
         </a-assets>
 
         <!-- Marker-based AR -->
         <a-marker preset="hiro" raycaster="objects: .clickable" emitevents="true">
-            <!-- Road surface with treadmill effect -->
+            <!-- Road container -->
             <a-entity id="road-container" position="0 0 0" rotation="-90 0 0">
                 <!-- Create a tiled road surface -->
                 <a-plane id="road" 
                     width="4" 
                     height="10" 
                     position="0 0 -2"
-                    color="#333333" 
-                    material="src: #road-texture; repeat: 2 10; shader: flat"
-                    animation__scroll="property: material.offset.y; from: 0; to: 10; dur: 5000; easing: linear; loop: true">
+                    color="#555555" 
+                    material="src: #road-texture; repeat: 2 5; shader: flat"
+                    road-scroll="speed: 0.5">
                 </a-plane>
                 
-                <!-- Road markings that move -->
-                <a-entity id="road-lines" position="0 0.01 -2">
-                    <a-plane width="0.1" height="1" color="white" position="0 0 0" 
-                            animation="property: position.y; from: -5; to: 5; dur: 2000; easing: linear; loop: true"></a-plane>
-                    <a-plane width="0.1" height="1" color="white" position="0 -3 0" 
-                            animation="property: position.y; from: -8; to: 2; dur: 2000; easing: linear; loop: true"></a-plane>
-                </a-entity>
-                
-                <!-- Car model -->
+                <!-- Car model with specific loading event -->
                 <a-entity id="car" 
-                    gltf-model="#car-model" 
                     position="0 0.2 0" 
                     rotation="0 90 0" 
-                    scale="0.5 0.5 0.5"
-                    animation="property: rotation; to: 0 90 0; dur: 1000; easing: easeInOutQuad; loop: false">
+                    scale="0.5 0.5 0.5">
+                    <a-gltf-model 
+                        src="assets/scene.glb" 
+                        scale="1 1 1" 
+                        position="0 0 0" 
+                        rotation="0 0 0">
+                    </a-gltf-model>
                 </a-entity>
                 
                 <!-- Add lights to better see the car -->
-                <a-light type="ambient" color="#BBB" intensity="0.5"></a-light>
+                <a-light type="ambient" color="#BBB" intensity="0.7"></a-light>
                 <a-light type="directional" color="#FFF" intensity="1" position="-1 1 2"></a-light>
+                <a-light type="point" color="#FFF" intensity="0.5" position="0 2 0"></a-light>
             </a-entity>
         </a-marker>
         
@@ -76,48 +122,58 @@
     </a-scene>
     
     <!-- AR interface buttons -->
-    <button class="ar-button" id="rotate-car">Rotate Car</button>
+    <div class="ar-controls">
+        <button class="ar-button" id="rotate-car">Rotate Car</button>
+        <button class="ar-button" id="speed-toggle">Toggle Speed</button>
+    </div>
 
     <script>
-        // Wait for everything to load
-        window.addEventListener('load', function() {
-            // Handle car rotation
-            const rotateButton = document.getElementById('rotate-car');
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadingMessage = document.getElementById('loading-message');
             const carEntity = document.getElementById('car');
+            const roadPlane = document.getElementById('road');
+            let isHighSpeed = false;
             
+            // Hide loading message when scene is loaded
+            const scene = document.querySelector('a-scene');
+            scene.addEventListener('loaded', function() {
+                setTimeout(() => {
+                    loadingMessage.classList.add('hidden');
+                }, 3000); // Give extra time for model loading
+            });
+            
+            // Handle model loading specifically
+            const model = document.querySelector('a-gltf-model');
+            model.addEventListener('model-loaded', function() {
+                console.log('Model loaded successfully!');
+                loadingMessage.classList.add('hidden');
+            });
+            
+            model.addEventListener('model-error', function(e) {
+                console.error('Error loading model:', e);
+                loadingMessage.textContent = 'Error loading 3D model. Check path: assets/scene.glb';
+            });
+            
+            // Car rotation button
+            const rotateButton = document.getElementById('rotate-car');
             rotateButton.addEventListener('click', function() {
-                // Get current Y rotation
                 const currentRotation = carEntity.getAttribute('rotation');
-                // Rotate 90 degrees more
                 carEntity.setAttribute('animation', {
                     property: 'rotation',
-                    to: `${currentRotation.x} ${currentRotation.y + 90} ${currentRotation.z}`,
+                    to: `${currentRotation.x} ${(parseFloat(currentRotation.y) + 90) % 360} ${currentRotation.z}`,
                     dur: 1000,
                     easing: 'easeInOutQuad'
                 });
             });
             
-            // Create road markings programmatically for a more dynamic look
-            const roadLines = document.getElementById('road-lines');
-            const numberOfLines = 5;
-            
-            for (let i = 0; i < numberOfLines; i++) {
-                const line = document.createElement('a-plane');
-                line.setAttribute('width', '0.1');
-                line.setAttribute('height', '0.8');
-                line.setAttribute('color', 'white');
-                line.setAttribute('position', `0 ${-10 + (i * 5)} 0`);
-                line.setAttribute('animation', {
-                    property: 'position.y',
-                    from: -10,
-                    to: 10,
-                    dur: 2000,
-                    delay: i * 400,
-                    easing: 'linear',
-                    loop: true
-                });
-                roadLines.appendChild(line);
-            }
+            // Speed toggle button
+            const speedToggle = document.getElementById('speed-toggle');
+            speedToggle.addEventListener('click', function() {
+                isHighSpeed = !isHighSpeed;
+                const speed = isHighSpeed ? 1.5 : 0.5;
+                roadPlane.setAttribute('road-scroll', { speed: speed });
+                speedToggle.textContent = isHighSpeed ? 'Slow Down' : 'Speed Up';
+            });
         });
     </script>
 </body>
