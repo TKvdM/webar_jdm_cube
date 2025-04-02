@@ -4,8 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebAR Car Showcase</title>
-    <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
     <style>
         body { margin: 0; overflow: hidden; }
         .ar-controls {
@@ -21,14 +24,45 @@
             color: white; padding: 10px; border-radius: 5px; font-family: monospace;
             font-size: 12px; z-index: 1000; max-width: 80%; overflow: auto; max-height: 30%;
         }
+        #instruction-panel {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8); color: white; padding: 20px;
+            border-radius: 10px; font-family: sans-serif; text-align: center;
+            z-index: 2000; display: none;
+        }
+        .progress-container {
+            width: 100%; background-color: #333; margin-top: 10px;
+            border-radius: 5px; overflow: hidden;
+        }
+        .progress-bar {
+            width: 0%; height: 10px; background-color: #4CAF50;
+            border-radius: 5px; transition: width 0.3s;
+        }
     </style>
 </head>
 <body>
     <div id="debug-panel">Model status: Initializing...</div>
+    
+    <div id="instruction-panel">
+        <h2>Find a flat surface</h2>
+        <p>Move your device around to find a flat surface where the road can be placed</p>
+        <div class="progress-container">
+            <div class="progress-bar" id="scan-progress"></div>
+        </div>
+    </div>
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" renderer="colorManagement: true">
-        <a-marker preset="hiro">
-            <a-plane width="4" height="10" rotation="-90 0 0" position="0 0 0" color="#555555">
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" renderer="colorManagement: true"
+             vr-mode-ui="enabled: false" gesture-detector>
+        
+        <!-- HIRO Marker Content -->
+        <a-marker preset="hiro" id="hiro-marker" emitevents="true">
+            <a-entity id="hiro-message" position="0 0.5 0" rotation="-90 0 0" text="value: HIRO marker detected!\nNow looking for a flat surface...; color: white; align: center; width: 2; wrapCount: 20"></a-entity>
+        </a-marker>
+
+        <!-- Surface Content (Initially Hidden) -->
+        <a-entity id="surface-content" visible="false">
+            <!-- Road -->
+            <a-plane id="road" width="4" height="10" rotation="-90 0 0" position="0 0 0" color="#555555">
                 <a-plane width="0.1" height="1" color="white" position="0 2 0.01" 
                         animation="property: position.y; from: 5; to: -5; dur: 2000; easing: linear; loop: true"></a-plane>
                 <a-plane width="0.1" height="1" color="white" position="0 -1 0.01" 
@@ -38,15 +72,18 @@
             </a-plane>
 
             <!-- Car entity -->
-            <a-entity position="0 0.5 0" rotation="0 0 0" scale="1 1 1">
-                <a-box id="temp-car" color="red" width="1" height="0.5" depth="2" visible="true"></a-box>
+            <a-entity position="-1.5 0.25 0" rotation="0 90 0" scale="1 1 1">
+                <a-box id="temp-car" color="red" width="0.5" height="0.3" depth="1" visible="true"
+                       animation="property: position.x; from: -2; to: 2; dur: 4000; easing: linear; loop: true"></a-box>
 
-                <!-- Actual car model with animation support -->
+                <!-- Actual car model with animation -->
                 <a-entity 
                     id="car-model" 
-                    gltf-model="Untitled.glb" 
-                    animation-mixer 
-                    visible="false">
+                    gltf-model="Untitled.glb"
+                    animation-mixer="clip: *; loop: repeat"
+                    visible="false"
+                    animation="property: position.x; from: -2; to: 2; dur: 4000; easing: linear; loop: true"
+                    gesture-handler>
                 </a-entity>
             </a-entity>
 
@@ -54,8 +91,9 @@
             <a-light type="ambient" color="#BBB" intensity="0.7"></a-light>
             <a-light type="directional" color="#FFF" intensity="1" position="-1 1 2"></a-light>
             <a-light type="hemisphere" color="#FFFFFF" intensity="1"></a-light>
-        </a-marker>
+        </a-entity>
 
+        <!-- AR Camera with Surface Detection -->
         <a-entity camera></a-entity>
     </a-scene>
 
@@ -63,15 +101,28 @@
     <div class="ar-controls">
         <button class="ar-button" id="toggle-model">Toggle Model/Placeholder</button>
         <button class="ar-button" id="try-load">Reload Model</button>
+        <button class="ar-button" id="place-surface" style="display: none;">Place Road Here</button>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const debugPanel = document.getElementById('debug-panel');
+            const instructionPanel = document.getElementById('instruction-panel');
+            const scanProgress = document.getElementById('scan-progress');
             const carModel = document.getElementById('car-model');
             const tempCar = document.getElementById('temp-car');
             const toggleButton = document.getElementById('toggle-model');
             const tryLoadButton = document.getElementById('try-load');
+            const placeSurfaceButton = document.getElementById('place-surface');
+            const surfaceContent = document.getElementById('surface-content');
+            const hiroMarker = document.getElementById('hiro-marker');
+            
+            // App state
+            let appState = 'initializing'; // initializing -> marker-detected -> surface-scanning -> placed
+            let scanTimer = null;
+            let scanDuration = 0;
+            let surfacePosition = { x: 0, y: 0, z: 0 };
+            let surfaceRotation = { x: -90, y: 0, z: 0 };
 
             function updateDebug(message) {
                 const timestamp = new Date().toLocaleTimeString();
@@ -80,6 +131,7 @@
                 console.log(message);
             }
 
+            // Load model event handlers
             carModel.addEventListener('model-loaded', function(evt) {
                 updateDebug('✅ Model loaded successfully!');
                 tempCar.setAttribute('visible', 'false');
@@ -97,20 +149,81 @@
             carModel.addEventListener('model-error', function(evt) {
                 updateDebug('❌ Error loading model: ' + evt.detail.message);
                 tempCar.setAttribute('visible', 'true');
-
-                fetch('https://raw.githubusercontent.com/TKvdM/webar-jdm-cube/main/assets/scene.glb', {method: 'HEAD'})
-                    .then(response => {
-                        if (response.ok) {
-                            updateDebug('✅ Model URL exists but may have CORS issues');
-                        } else {
-                            updateDebug(`❌ Model URL returned ${response.status}`);
-                        }
-                    })
-                    .catch(error => {
-                        updateDebug(`❌ Network error: ${error.message}`);
-                    });
             });
 
+            // Handle marker detection
+            hiroMarker.addEventListener('markerFound', function() {
+                updateDebug('✅ HIRO marker found');
+                if (appState === 'initializing') {
+                    appState = 'marker-detected';
+                    setTimeout(() => {
+                        // After a short delay, switch to surface scanning mode
+                        startSurfaceScanning();
+                    }, 2000);
+                }
+            });
+
+            hiroMarker.addEventListener('markerLost', function() {
+                updateDebug('❌ HIRO marker lost');
+                if (appState === 'marker-detected') {
+                    // Reset if we lose the marker before finding a surface
+                    appState = 'initializing';
+                }
+            });
+
+            // Start surface scanning
+            function startSurfaceScanning() {
+                appState = 'surface-scanning';
+                updateDebug('🔍 Looking for flat surface...');
+                
+                // Show user instructions
+                instructionPanel.style.display = 'block';
+                placeSurfaceButton.style.display = 'block';
+                
+                // Simulate surface scanning progress (would be handled by AR library in production)
+                scanDuration = 0;
+                scanTimer = setInterval(() => {
+                    scanDuration += 100;
+                    let progress = Math.min(scanDuration / 3000 * 100, 100);
+                    scanProgress.style.width = `${progress}%`;
+                    
+                    if (progress >= 100) {
+                        clearInterval(scanTimer);
+                        updateDebug('✅ Flat surface detected! You can place the road now.');
+                        instructionPanel.querySelector('h2').innerText = 'Surface Found!';
+                        instructionPanel.querySelector('p').innerText = 'Press "Place Road Here" button to continue';
+                    }
+                }, 100);
+            }
+
+            // Place road on surface
+            placeSurfaceButton.addEventListener('click', function() {
+                appState = 'placed';
+                instructionPanel.style.display = 'none';
+                
+                // Hide HIRO marker content, show surface content
+                hiroMarker.setAttribute('visible', 'false');
+                surfaceContent.setAttribute('visible', 'true');
+                
+                // Position the surface content in front of the camera
+                const camera = document.querySelector('[camera]');
+                const cameraPosition = camera.object3D.position;
+                const forward = new THREE.Vector3(0, 0, -1);
+                forward.applyQuaternion(camera.object3D.quaternion);
+                forward.multiplyScalar(3); // Place 3 units in front of the camera
+                
+                // Set position of surface content
+                surfacePosition = {
+                    x: cameraPosition.x + forward.x,
+                    y: 0, // On the floor
+                    z: cameraPosition.z + forward.z
+                };
+                
+                surfaceContent.setAttribute('position', surfacePosition);
+                updateDebug('✅ Road placed on surface!');
+            });
+
+            // UI button handlers
             toggleButton.addEventListener('click', function() {
                 const isModelVisible = carModel.getAttribute('visible') === 'true';
                 updateDebug(`Toggling visibility: model=${!isModelVisible}, placeholder=${isModelVisible}`);
@@ -128,21 +241,7 @@
                 }, 500);
             });
 
-            updateDebug('Initializing... waiting for model to load');
-
-            const marker = document.querySelector('a-marker');
-            marker.addEventListener('markerFound', function() {
-                updateDebug('✅ Marker found');
-            });
-
-            marker.addEventListener('markerLost', function() {
-                updateDebug('❌ Marker lost');
-            });
-
-            const scene = document.querySelector('a-scene');
-            scene.addEventListener('loaded', function() {
-                updateDebug('✅ Scene loaded');
-            });
+            updateDebug('Initializing... waiting for HIRO marker');
         });
     </script>
 </body>
