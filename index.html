@@ -4,9 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebAR Car Showcase</title>
-    <!-- Use older but more stable versions for WebAR -->
-    <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <!-- Stable A-Frame and AR.js versions -->
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.0/dist/aframe-extras.min.js"></script>
+
     <style>
         body {
             margin: 0;
@@ -51,8 +53,8 @@
     <div id="debug-panel">Model status: Initializing...</div>
     
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
-        <!-- Road surface with moving stripes -->
         <a-marker preset="hiro">
+            <!-- Road surface with moving stripes -->
             <a-plane width="4" height="10" rotation="-90 0 0" position="0 0 0" color="#555555">
                 <a-plane width="0.1" height="1" color="white" position="0 2 0.01" 
                         animation="property: position.y; from: 5; to: -5; dur: 2000; easing: linear; loop: true"></a-plane>
@@ -67,10 +69,11 @@
                 <!-- Temporary placeholder car -->
                 <a-box id="temp-car" color="red" width="1" height="0.5" depth="2" visible="true"></a-box>
                 
-                <!-- Your actual car model - using direct URL to GitHub -->
+                <!-- Your actual car model with animation support -->
                 <a-entity 
                     id="car-model" 
                     gltf-model="car-1.glb" 
+                    animation-mixer
                     visible="false">
                 </a-entity>
             </a-entity>
@@ -90,7 +93,6 @@
     </div>
     
     <script>
-        // Wait for DOM to be ready
         document.addEventListener('DOMContentLoaded', function() {
             const debugPanel = document.getElementById('debug-panel');
             const carModel = document.getElementById('car-model');
@@ -98,7 +100,6 @@
             const toggleButton = document.getElementById('toggle-model');
             const tryLoadButton = document.getElementById('try-load');
             
-            // Function to update debug info
             function updateDebug(message) {
                 const timestamp = new Date().toLocaleTimeString();
                 debugPanel.innerHTML += `<br>${timestamp}: ${message}`;
@@ -111,25 +112,15 @@
                 updateDebug('✅ Model loaded successfully!');
                 tempCar.setAttribute('visible', 'false');
                 carModel.setAttribute('visible', 'true');
+                
+                // Play animation after load
+                carModel.setAttribute('animation-mixer', '');
             });
             
             // Model failed to load
             carModel.addEventListener('model-error', function(evt) {
                 updateDebug('❌ Error loading model: ' + evt.detail.message);
                 tempCar.setAttribute('visible', 'true');
-                
-                // Try a CORS check
-                fetch('https://raw.githubusercontent.com/TKvdM/webar-jdm-cube/main/assets/scene.glb', {method: 'HEAD'})
-                    .then(response => {
-                        if (response.ok) {
-                            updateDebug('✅ Model URL exists but may have CORS issues');
-                        } else {
-                            updateDebug(`❌ Model URL returned ${response.status}`);
-                        }
-                    })
-                    .catch(error => {
-                        updateDebug(`❌ Network error: ${error.message}`);
-                    });
             });
             
             // Toggle button functionality
@@ -143,7 +134,6 @@
             // Reload button functionality
             tryLoadButton.addEventListener('click', function() {
                 updateDebug('Attempting to reload model...');
-                // Remove and re-add the model to force reload
                 const currentUrl = carModel.getAttribute('gltf-model');
                 carModel.setAttribute('gltf-model', '');
                 setTimeout(() => {
