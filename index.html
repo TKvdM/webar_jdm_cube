@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WebAR Car Showcase</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
@@ -10,7 +10,18 @@
     <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
     <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; }
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        .a-enter-vr {
+            display: none;
+        }
         .ar-controls {
             position: absolute; bottom: 20px; left: 0; right: 0;
             display: flex; justify-content: center; gap: 10px; z-index: 999;
@@ -38,9 +49,38 @@
             width: 0%; height: 10px; background-color: #4CAF50;
             border-radius: 5px; transition: width 0.3s;
         }
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        #camera-permission-button {
+            padding: 12px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
+    <div id="loading-screen">
+        <h2>WebAR Car Experience</h2>
+        <p>Click below to start and allow camera access</p>
+        <button id="camera-permission-button">Start Experience</button>
+    </div>
+
     <div id="debug-panel">Model status: Initializing...</div>
     
     <div id="instruction-panel">
@@ -51,51 +91,8 @@
         </div>
     </div>
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" renderer="colorManagement: true"
-             vr-mode-ui="enabled: false" gesture-detector>
-        
-        <!-- HIRO Marker Content -->
-        <a-marker preset="hiro" id="hiro-marker" emitevents="true">
-            <a-entity id="hiro-message" position="0 0.5 0" rotation="-90 0 0" text="value: HIRO marker detected!\nNow looking for a flat surface...; color: white; align: center; width: 2; wrapCount: 20"></a-entity>
-        </a-marker>
-
-        <!-- Surface Content (Initially Hidden) -->
-        <a-entity id="surface-content" visible="false">
-            <!-- Road -->
-            <a-plane id="road" width="4" height="10" rotation="-90 0 0" position="0 0 0" color="#555555">
-                <a-plane width="0.1" height="1" color="white" position="0 2 0.01" 
-                        animation="property: position.y; from: 5; to: -5; dur: 2000; easing: linear; loop: true"></a-plane>
-                <a-plane width="0.1" height="1" color="white" position="0 -1 0.01" 
-                        animation="property: position.y; from: 2; to: -8; dur: 2000; easing: linear; loop: true"></a-plane>
-                <a-plane width="0.1" height="1" color="white" position="0 -4 0.01" 
-                        animation="property: position.y; from: -1; to: -11; dur: 2000; easing: linear; loop: true"></a-plane>
-            </a-plane>
-
-            <!-- Car entity -->
-            <a-entity position="-1.5 0.25 0" rotation="0 90 0" scale="1 1 1">
-                <a-box id="temp-car" color="red" width="0.5" height="0.3" depth="1" visible="true"
-                       animation="property: position.x; from: -2; to: 2; dur: 4000; easing: linear; loop: true"></a-box>
-
-                <!-- Actual car model with animation -->
-                <a-entity 
-                    id="car-model" 
-                    gltf-model="Untitled.glb"
-                    animation-mixer="clip: *; loop: repeat"
-                    visible="false"
-                    animation="property: position.x; from: -2; to: 2; dur: 4000; easing: linear; loop: true"
-                    gesture-handler>
-                </a-entity>
-            </a-entity>
-
-            <!-- Lighting -->
-            <a-light type="ambient" color="#BBB" intensity="0.7"></a-light>
-            <a-light type="directional" color="#FFF" intensity="1" position="-1 1 2"></a-light>
-            <a-light type="hemisphere" color="#FFFFFF" intensity="1"></a-light>
-        </a-entity>
-
-        <!-- AR Camera with Surface Detection -->
-        <a-entity camera></a-entity>
-    </a-scene>
+    <!-- We'll initialize the scene only after camera permission is granted -->
+    <div id="scene-container"></div>
 
     <!-- Control buttons -->
     <div class="ar-controls">
@@ -109,20 +106,20 @@
             const debugPanel = document.getElementById('debug-panel');
             const instructionPanel = document.getElementById('instruction-panel');
             const scanProgress = document.getElementById('scan-progress');
-            const carModel = document.getElementById('car-model');
-            const tempCar = document.getElementById('temp-car');
+            const loadingScreen = document.getElementById('loading-screen');
+            const sceneContainer = document.getElementById('scene-container');
+            const permissionButton = document.getElementById('camera-permission-button');
             const toggleButton = document.getElementById('toggle-model');
             const tryLoadButton = document.getElementById('try-load');
             const placeSurfaceButton = document.getElementById('place-surface');
-            const surfaceContent = document.getElementById('surface-content');
-            const hiroMarker = document.getElementById('hiro-marker');
             
             // App state
-            let appState = 'initializing'; // initializing -> marker-detected -> surface-scanning -> placed
+            let appState = 'initializing'; // initializing -> camera-permission -> marker-detected -> surface-scanning -> placed
             let scanTimer = null;
             let scanDuration = 0;
             let surfacePosition = { x: 0, y: 0, z: 0 };
             let surfaceRotation = { x: -90, y: 0, z: 0 };
+            let isFullHD = false;
 
             function updateDebug(message) {
                 const timestamp = new Date().toLocaleTimeString();
@@ -131,45 +128,305 @@
                 console.log(message);
             }
 
-            // Load model event handlers
-            carModel.addEventListener('model-loaded', function(evt) {
-                updateDebug('✅ Model loaded successfully!');
-                tempCar.setAttribute('visible', 'false');
-                carModel.setAttribute('visible', 'true');
-
-                // Debugging animations
-                const model = evt.detail.model;
-                if (model.animations.length > 0) {
-                    updateDebug(`🎬 Animations found: ${model.animations.length}`);
-                } else {
-                    updateDebug('❌ No animations found in model!');
+            function handleDeviceOrientation() {
+                // This will be called whenever orientation changes
+                updateDebug(`Orientation changed: ${window.innerWidth}x${window.innerHeight}`);
+                
+                // If already placed, we might want to adjust the scene
+                if (appState === 'placed') {
+                    // Adjust scene based on new orientation
                 }
+            }
+
+            // Listen for orientation changes
+            window.addEventListener('orientationchange', handleDeviceOrientation);
+            window.addEventListener('resize', handleDeviceOrientation);
+
+            // Initialize the AR scene after camera permission
+            permissionButton.addEventListener('click', function() {
+                initializeARScene();
             });
 
-            carModel.addEventListener('model-error', function(evt) {
-                updateDebug('❌ Error loading model: ' + evt.detail.message);
+            function initializeARScene() {
+                loadingScreen.style.display = 'none';
+                updateDebug('Requesting camera permission...');
+
+                // Try to access the camera with desired constraints
+                navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                }).then(stream => {
+                    // Camera permission granted
+                    updateDebug('✅ Camera permission granted');
+                    appState = 'camera-permission';
+                    
+                    // Get the actual constraints being used
+                    const videoTrack = stream.getVideoTracks()[0];
+                    const capabilities = videoTrack.getCapabilities();
+                    const settings = videoTrack.getSettings();
+                    
+                    updateDebug(`📷 Camera resolution: ${settings.width}x${settings.height}`);
+                    isFullHD = (settings.width >= 1280);
+                    
+                    // Now we can create the AR scene
+                    createARScene();
+                    
+                    // Stop this initial stream as AR.js will create its own
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                }).catch(error => {
+                    updateDebug('❌ Camera access denied: ' + error.message);
+                    alert('Camera access is required for this AR experience. Please allow camera access and try again.');
+                });
+            }
+
+            function createARScene() {
+                // Create A-Frame scene
+                const arScene = document.createElement('a-scene');
+                arScene.setAttribute('embedded', '');
+                arScene.setAttribute('vr-mode-ui', 'enabled: false');
+                arScene.setAttribute('gesture-detector', '');
+                arScene.setAttribute('renderer', 'colorManagement: true; antialias: true; logarithmicDepthBuffer: true;');
+                
+                // Configure AR.js with optimized settings
+                const arjsSettings = {
+                    sourceType: 'webcam',
+                    debugUIEnabled: false,
+                    detectionMode: 'mono',
+                    matrixCodeType: '3x3',
+                    cameraParametersUrl: 'https://raw.githack.com/AR-js-org/AR.js/master/data/data/camera_para.dat',
+                    patternRatio: 0.65,
+                    sourceWidth: window.innerWidth > window.innerHeight ? 640 : 480,
+                    sourceHeight: window.innerWidth > window.innerHeight ? 480 : 640,
+                    displayWidth: window.innerWidth,
+                    displayHeight: window.innerHeight,
+                    canvasWidth: window.innerWidth,
+                    canvasHeight: window.innerHeight,
+                    maxDetectionRate: 60
+                };
+                
+                arScene.setAttribute('arjs', Object.entries(arjsSettings).map(([key, value]) => `${key}: ${value}`).join('; '));
+                
+                // HIRO Marker Content
+                const hiroMarker = document.createElement('a-marker');
+                hiroMarker.setAttribute('preset', 'hiro');
+                hiroMarker.setAttribute('id', 'hiro-marker');
+                hiroMarker.setAttribute('emitevents', 'true');
+                
+                const hiroMessage = document.createElement('a-entity');
+                hiroMessage.setAttribute('id', 'hiro-message');
+                hiroMessage.setAttribute('position', '0 0.5 0');
+                hiroMessage.setAttribute('rotation', '-90 0 0');
+                hiroMessage.setAttribute('text', 'value: HIRO marker detected!\nNow looking for a flat surface...; color: white; align: center; width: 2; wrapCount: 20');
+                hiroMarker.appendChild(hiroMessage);
+                arScene.appendChild(hiroMarker);
+                
+                // Surface Content (Initially Hidden)
+                const surfaceContent = document.createElement('a-entity');
+                surfaceContent.setAttribute('id', 'surface-content');
+                surfaceContent.setAttribute('visible', 'false');
+                
+                // Road
+                const road = document.createElement('a-plane');
+                road.setAttribute('id', 'road');
+                road.setAttribute('width', '4');
+                road.setAttribute('height', '10');
+                road.setAttribute('rotation', '-90 0 0');
+                road.setAttribute('position', '0 0 0');
+                road.setAttribute('color', '#555555');
+                
+                // Road markings
+                const roadMarking1 = document.createElement('a-plane');
+                roadMarking1.setAttribute('width', '0.1');
+                roadMarking1.setAttribute('height', '1');
+                roadMarking1.setAttribute('color', 'white');
+                roadMarking1.setAttribute('position', '0 2 0.01');
+                roadMarking1.setAttribute('animation', 'property: position.y; from: 5; to: -5; dur: 2000; easing: linear; loop: true');
+                road.appendChild(roadMarking1);
+                
+                const roadMarking2 = document.createElement('a-plane');
+                roadMarking2.setAttribute('width', '0.1');
+                roadMarking2.setAttribute('height', '1');
+                roadMarking2.setAttribute('color', 'white');
+                roadMarking2.setAttribute('position', '0 -1 0.01');
+                roadMarking2.setAttribute('animation', 'property: position.y; from: 2; to: -8; dur: 2000; easing: linear; loop: true');
+                road.appendChild(roadMarking2);
+                
+                const roadMarking3 = document.createElement('a-plane');
+                roadMarking3.setAttribute('width', '0.1');
+                roadMarking3.setAttribute('height', '1');
+                roadMarking3.setAttribute('color', 'white');
+                roadMarking3.setAttribute('position', '0 -4 0.01');
+                roadMarking3.setAttribute('animation', 'property: position.y; from: -1; to: -11; dur: 2000; easing: linear; loop: true');
+                road.appendChild(roadMarking3);
+                
+                surfaceContent.appendChild(road);
+                
+                // Car entity
+                const carEntity = document.createElement('a-entity');
+                carEntity.setAttribute('position', '-1.5 0.25 0');
+                carEntity.setAttribute('rotation', '0 90 0');
+                carEntity.setAttribute('scale', '1 1 1');
+                
+                const tempCar = document.createElement('a-box');
+                tempCar.setAttribute('id', 'temp-car');
+                tempCar.setAttribute('color', 'red');
+                tempCar.setAttribute('width', '0.5');
+                tempCar.setAttribute('height', '0.3');
+                tempCar.setAttribute('depth', '1');
                 tempCar.setAttribute('visible', 'true');
-            });
+                tempCar.setAttribute('animation', 'property: position.x; from: -2; to: 2; dur: 4000; easing: linear; loop: true');
+                carEntity.appendChild(tempCar);
+                
+                const carModel = document.createElement('a-entity');
+                carModel.setAttribute('id', 'car-model');
+                carModel.setAttribute('gltf-model', 'Untitled.glb');
+                carModel.setAttribute('animation-mixer', 'clip: *; loop: repeat');
+                carModel.setAttribute('visible', 'false');
+                carModel.setAttribute('animation', 'property: position.x; from: -2; to: 2; dur: 4000; easing: linear; loop: true');
+                carModel.setAttribute('gesture-handler', '');
+                carEntity.appendChild(carModel);
+                
+                surfaceContent.appendChild(carEntity);
+                
+                // Lighting
+                const ambientLight = document.createElement('a-light');
+                ambientLight.setAttribute('type', 'ambient');
+                ambientLight.setAttribute('color', '#BBB');
+                ambientLight.setAttribute('intensity', '0.7');
+                surfaceContent.appendChild(ambientLight);
+                
+                const directionalLight = document.createElement('a-light');
+                directionalLight.setAttribute('type', 'directional');
+                directionalLight.setAttribute('color', '#FFF');
+                directionalLight.setAttribute('intensity', '1');
+                directionalLight.setAttribute('position', '-1 1 2');
+                surfaceContent.appendChild(directionalLight);
+                
+                const hemisphereLight = document.createElement('a-light');
+                hemisphereLight.setAttribute('type', 'hemisphere');
+                hemisphereLight.setAttribute('color', '#FFFFFF');
+                hemisphereLight.setAttribute('intensity', '1');
+                surfaceContent.appendChild(hemisphereLight);
+                
+                arScene.appendChild(surfaceContent);
+                
+                // Camera
+                const camera = document.createElement('a-entity');
+                camera.setAttribute('camera', '');
+                camera.setAttribute('look-controls', 'pointerLockEnabled: false; touchEnabled: true;');
+                arScene.appendChild(camera);
+                
+                // Add scene to container
+                sceneContainer.appendChild(arScene);
+                
+                // Setup event listeners
+                setupEventListeners();
+            }
 
-            // Handle marker detection
-            hiroMarker.addEventListener('markerFound', function() {
-                updateDebug('✅ HIRO marker found');
-                if (appState === 'initializing') {
-                    appState = 'marker-detected';
-                    setTimeout(() => {
-                        // After a short delay, switch to surface scanning mode
-                        startSurfaceScanning();
-                    }, 2000);
-                }
-            });
+            function setupEventListeners() {
+                // Wait for scene to be available in DOM
+                setTimeout(() => {
+                    const carModel = document.getElementById('car-model');
+                    const tempCar = document.getElementById('temp-car');
+                    const hiroMarker = document.getElementById('hiro-marker');
+                    const surfaceContent = document.getElementById('surface-content');
 
-            hiroMarker.addEventListener('markerLost', function() {
-                updateDebug('❌ HIRO marker lost');
-                if (appState === 'marker-detected') {
-                    // Reset if we lose the marker before finding a surface
-                    appState = 'initializing';
-                }
-            });
+                    // Load model event handlers
+                    carModel.addEventListener('model-loaded', function(evt) {
+                        updateDebug('✅ Model loaded successfully!');
+                        tempCar.setAttribute('visible', 'false');
+                        carModel.setAttribute('visible', 'true');
+
+                        // Debugging animations
+                        const model = evt.detail.model;
+                        if (model.animations.length > 0) {
+                            updateDebug(`🎬 Animations found: ${model.animations.length}`);
+                        } else {
+                            updateDebug('❌ No animations found in model!');
+                        }
+                    });
+
+                    carModel.addEventListener('model-error', function(evt) {
+                        updateDebug('❌ Error loading model: ' + evt.detail.message);
+                        tempCar.setAttribute('visible', 'true');
+                    });
+
+                    // Handle marker detection
+                    hiroMarker.addEventListener('markerFound', function() {
+                        updateDebug('✅ HIRO marker found');
+                        if (appState === 'camera-permission' || appState === 'initializing') {
+                            appState = 'marker-detected';
+                            setTimeout(() => {
+                                // After a short delay, switch to surface scanning mode
+                                startSurfaceScanning();
+                            }, 2000);
+                        }
+                    });
+
+                    hiroMarker.addEventListener('markerLost', function() {
+                        updateDebug('❌ HIRO marker lost');
+                        if (appState === 'marker-detected') {
+                            // Reset if we lose the marker before finding a surface
+                            appState = 'camera-permission';
+                        }
+                    });
+
+                    // Register scene loaded
+                    const scene = document.querySelector('a-scene');
+                    scene.addEventListener('loaded', function() {
+                        updateDebug('✅ Scene loaded, looking for HIRO marker');
+                    });
+
+                    // UI button handlers
+                    toggleButton.addEventListener('click', function() {
+                        const isModelVisible = carModel.getAttribute('visible') === 'true';
+                        updateDebug(`Toggling visibility: model=${!isModelVisible}, placeholder=${isModelVisible}`);
+                        carModel.setAttribute('visible', !isModelVisible);
+                        tempCar.setAttribute('visible', isModelVisible);
+                    });
+
+                    tryLoadButton.addEventListener('click', function() {
+                        updateDebug('Attempting to reload model...');
+                        const currentUrl = carModel.getAttribute('gltf-model');
+                        carModel.setAttribute('gltf-model', '');
+                        setTimeout(() => {
+                            carModel.setAttribute('gltf-model', currentUrl);
+                            updateDebug('Model reload attempted');
+                        }, 500);
+                    });
+
+                    placeSurfaceButton.addEventListener('click', function() {
+                        appState = 'placed';
+                        instructionPanel.style.display = 'none';
+                        
+                        // Hide HIRO marker content, show surface content
+                        hiroMarker.setAttribute('visible', 'false');
+                        surfaceContent.setAttribute('visible', 'true');
+                        
+                        // Position the surface content in front of the camera
+                        const camera = document.querySelector('[camera]');
+                        const cameraPosition = camera.object3D.position;
+                        const forward = new THREE.Vector3(0, 0, -1);
+                        forward.applyQuaternion(camera.object3D.quaternion);
+                        forward.multiplyScalar(3); // Place 3 units in front of the camera
+                        
+                        // Set position of surface content
+                        surfacePosition = {
+                            x: cameraPosition.x + forward.x,
+                            y: 0, // On the floor
+                            z: cameraPosition.z + forward.z
+                        };
+                        
+                        surfaceContent.setAttribute('position', surfacePosition);
+                        updateDebug('✅ Road placed on surface!');
+                    });
+                }, 1000); // Give time for scene to initialize
+            }
 
             // Start surface scanning
             function startSurfaceScanning() {
@@ -195,53 +452,6 @@
                     }
                 }, 100);
             }
-
-            // Place road on surface
-            placeSurfaceButton.addEventListener('click', function() {
-                appState = 'placed';
-                instructionPanel.style.display = 'none';
-                
-                // Hide HIRO marker content, show surface content
-                hiroMarker.setAttribute('visible', 'false');
-                surfaceContent.setAttribute('visible', 'true');
-                
-                // Position the surface content in front of the camera
-                const camera = document.querySelector('[camera]');
-                const cameraPosition = camera.object3D.position;
-                const forward = new THREE.Vector3(0, 0, -1);
-                forward.applyQuaternion(camera.object3D.quaternion);
-                forward.multiplyScalar(3); // Place 3 units in front of the camera
-                
-                // Set position of surface content
-                surfacePosition = {
-                    x: cameraPosition.x + forward.x,
-                    y: 0, // On the floor
-                    z: cameraPosition.z + forward.z
-                };
-                
-                surfaceContent.setAttribute('position', surfacePosition);
-                updateDebug('✅ Road placed on surface!');
-            });
-
-            // UI button handlers
-            toggleButton.addEventListener('click', function() {
-                const isModelVisible = carModel.getAttribute('visible') === 'true';
-                updateDebug(`Toggling visibility: model=${!isModelVisible}, placeholder=${isModelVisible}`);
-                carModel.setAttribute('visible', !isModelVisible);
-                tempCar.setAttribute('visible', isModelVisible);
-            });
-
-            tryLoadButton.addEventListener('click', function() {
-                updateDebug('Attempting to reload model...');
-                const currentUrl = carModel.getAttribute('gltf-model');
-                carModel.setAttribute('gltf-model', '');
-                setTimeout(() => {
-                    carModel.setAttribute('gltf-model', currentUrl);
-                    updateDebug('Model reload attempted');
-                }, 500);
-            });
-
-            updateDebug('Initializing... waiting for HIRO marker');
         });
     </script>
 </body>
