@@ -26,7 +26,7 @@
 <body>
     <div id="debug-panel">Model status: Initializing...</div>
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" renderer="colorManagement: true">
         <a-marker preset="hiro">
             <a-plane width="4" height="10" rotation="-90 0 0" position="0 0 0" color="#555555">
                 <a-plane width="0.1" height="1" color="white" position="0 2 0.01" 
