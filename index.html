@@ -4,57 +4,30 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebAR Car Showcase</title>
-    <!-- Stable A-Frame and AR.js versions -->
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.0/dist/aframe-extras.min.js"></script>
-
+    <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-        }
+        body { margin: 0; overflow: hidden; }
         .ar-controls {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            z-index: 999;
+            position: absolute; bottom: 20px; left: 0; right: 0;
+            display: flex; justify-content: center; gap: 10px; z-index: 999;
         }
         .ar-button {
-            padding: 12px 20px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
+            padding: 12px 20px; background: rgba(0, 0, 0, 0.7);
+            color: white; border: none; border-radius: 5px; font-weight: bold;
         }
         #debug-panel {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 12px;
-            z-index: 1000;
-            max-width: 80%;
-            overflow: auto;
-            max-height: 30%;
+            position: absolute; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.7);
+            color: white; padding: 10px; border-radius: 5px; font-family: monospace;
+            font-size: 12px; z-index: 1000; max-width: 80%; overflow: auto; max-height: 30%;
         }
     </style>
 </head>
 <body>
     <div id="debug-panel">Model status: Initializing...</div>
-    
+
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
         <a-marker preset="hiro">
-            <!-- Road surface with moving stripes -->
             <a-plane width="4" height="10" rotation="-90 0 0" position="0 0 0" color="#555555">
                 <a-plane width="0.1" height="1" color="white" position="0 2 0.01" 
                         animation="property: position.y; from: 5; to: -5; dur: 2000; easing: linear; loop: true"></a-plane>
@@ -63,35 +36,35 @@
                 <a-plane width="0.1" height="1" color="white" position="0 -4 0.01" 
                         animation="property: position.y; from: -1; to: -11; dur: 2000; easing: linear; loop: true"></a-plane>
             </a-plane>
-            
+
             <!-- Car entity -->
             <a-entity position="0 0.5 0" rotation="0 0 0" scale="1 1 1">
-                <!-- Temporary placeholder car -->
                 <a-box id="temp-car" color="red" width="1" height="0.5" depth="2" visible="true"></a-box>
-                
-                <!-- Your actual car model with animation support -->
+
+                <!-- Actual car model with animation support -->
                 <a-entity 
                     id="car-model" 
                     gltf-model="car-1.glb" 
-                    animation-mixer
+                    animation-mixer 
                     visible="false">
                 </a-entity>
             </a-entity>
-            
-            <!-- Add lighting to better see the model -->
+
+            <!-- Lighting -->
             <a-light type="ambient" color="#BBB" intensity="0.7"></a-light>
             <a-light type="directional" color="#FFF" intensity="1" position="-1 1 2"></a-light>
+            <a-light type="hemisphere" color="#FFFFFF" intensity="1"></a-light>
         </a-marker>
-        
+
         <a-entity camera></a-entity>
     </a-scene>
-    
+
     <!-- Control buttons -->
     <div class="ar-controls">
         <button class="ar-button" id="toggle-model">Toggle Model/Placeholder</button>
         <button class="ar-button" id="try-load">Reload Model</button>
     </div>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const debugPanel = document.getElementById('debug-panel');
@@ -99,39 +72,52 @@
             const tempCar = document.getElementById('temp-car');
             const toggleButton = document.getElementById('toggle-model');
             const tryLoadButton = document.getElementById('try-load');
-            
+
             function updateDebug(message) {
                 const timestamp = new Date().toLocaleTimeString();
                 debugPanel.innerHTML += `<br>${timestamp}: ${message}`;
                 debugPanel.scrollTop = debugPanel.scrollHeight;
                 console.log(message);
             }
-            
-            // Model loaded successfully
+
             carModel.addEventListener('model-loaded', function(evt) {
                 updateDebug('✅ Model loaded successfully!');
                 tempCar.setAttribute('visible', 'false');
                 carModel.setAttribute('visible', 'true');
-                
-                // Play animation after load
-                carModel.setAttribute('animation-mixer', '');
+
+                // Debugging animations
+                const model = evt.detail.model;
+                if (model.animations.length > 0) {
+                    updateDebug(`🎬 Animations found: ${model.animations.length}`);
+                } else {
+                    updateDebug('❌ No animations found in model!');
+                }
             });
-            
-            // Model failed to load
+
             carModel.addEventListener('model-error', function(evt) {
                 updateDebug('❌ Error loading model: ' + evt.detail.message);
                 tempCar.setAttribute('visible', 'true');
+
+                fetch('https://raw.githubusercontent.com/TKvdM/webar-jdm-cube/main/assets/scene.glb', {method: 'HEAD'})
+                    .then(response => {
+                        if (response.ok) {
+                            updateDebug('✅ Model URL exists but may have CORS issues');
+                        } else {
+                            updateDebug(`❌ Model URL returned ${response.status}`);
+                        }
+                    })
+                    .catch(error => {
+                        updateDebug(`❌ Network error: ${error.message}`);
+                    });
             });
-            
-            // Toggle button functionality
+
             toggleButton.addEventListener('click', function() {
                 const isModelVisible = carModel.getAttribute('visible') === 'true';
                 updateDebug(`Toggling visibility: model=${!isModelVisible}, placeholder=${isModelVisible}`);
                 carModel.setAttribute('visible', !isModelVisible);
                 tempCar.setAttribute('visible', isModelVisible);
             });
-            
-            // Reload button functionality
+
             tryLoadButton.addEventListener('click', function() {
                 updateDebug('Attempting to reload model...');
                 const currentUrl = carModel.getAttribute('gltf-model');
@@ -141,21 +127,18 @@
                     updateDebug('Model reload attempted');
                 }, 500);
             });
-            
-            // Initial status
+
             updateDebug('Initializing... waiting for model to load');
-            
-            // Check if marker is found
+
             const marker = document.querySelector('a-marker');
             marker.addEventListener('markerFound', function() {
                 updateDebug('✅ Marker found');
             });
-            
+
             marker.addEventListener('markerLost', function() {
                 updateDebug('❌ Marker lost');
             });
-            
-            // Check scene loading
+
             const scene = document.querySelector('a-scene');
             scene.addEventListener('loaded', function() {
                 updateDebug('✅ Scene loaded');
