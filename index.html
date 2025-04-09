@@ -50,41 +50,41 @@
 <body>
     <div id="debug-panel">Model status: Initializing...</div>
     
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; patternRatio: 0.75; trackingMethod: best;">
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
         <!-- Road surface with moving stripes -->
-        <a-marker preset="hiro" raycaster="objects: .clickable" emitevents="true" cursor="fuse: false; rayOrigin: mouse;" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
-            <!-- Main container to rotate everything properly -->
-            <a-entity position="0 0 0" rotation="0 0 0">
-                <!-- ROAD PLANE - Raised slightly above marker to be visible -->
-                <a-plane width="5" height="10" rotation="-90 0 0" position="0 0.01 0" color="#555555">
-                    <!-- Solid white center line -->
-                    <a-plane 
-                      width="0.1" 
-                      height="10" 
-                      rotation="0 0 0" 
-                      position="0 0 0.005" 
-                      color="#FFFFFF"
-                      material="shader: flat;">
-                    </a-plane>
+        <a-marker preset="hiro">
+            <!-- ROAD PLANE -->
+            <a-plane width="4" height="10" rotation="-90 0 0" position="0 0 0" color="#555555">
+                <!-- Repeating White Line Texture -->
+                <a-plane 
+                  width="0.2" 
+                  height="30" 
+                  rotation="0 0 0" 
+                  position="0 0 0.01" 
+                  color="white">
                 </a-plane>
+            </a-plane>
+            
+            <!-- Top & Bottom Mask Planes to hide overflow -->
+            <a-plane width="4" height="2" rotation="-90 90 0" position="0 6 0.02" color="#000000"></a-plane>
+            <a-plane width="4" height="2" rotation="-90 90 0" position="0 -6 0.02" color="#000000"></a-plane>
+            
+            <!-- Car entity - centered and properly oriented -->
+            <a-entity position="0 0.5 0" rotation="0 180 0" scale="0.5 0.5 0.5">
+                <!-- Temporary placeholder car -->
+                <a-box id="temp-car" color="red" width="1.5" height="0.8" depth="3" visible="true"></a-box>
                 
-                <!-- Car entity - positioned at center of road -->
-                <a-entity position="0 0.5 0" rotation="0 180 0" scale="0.5 0.5 0.5">
-                    <!-- Temporary placeholder car -->
-                    <a-box id="temp-car" color="red" width="1.5" height="0.8" depth="3" visible="true"></a-box>
-                    
-                    <!-- Your actual car model -->
-                    <a-entity 
-                        id="car-model" 
-                        gltf-model="car-1.glb" 
-                        visible="false">
-                    </a-entity>
+                <!-- Your actual car model -->
+                <a-entity 
+                    id="car-model" 
+                    gltf-model="car-1.glb" 
+                    visible="false">
                 </a-entity>
-                
-                <!-- Add lighting to better see the model -->
-                <a-light type="ambient" color="#BBB" intensity="0.7"></a-light>
-                <a-light type="directional" color="#FFF" intensity="1" position="-1 1 2"></a-light>
             </a-entity>
+            
+            <!-- Add lighting to better see the model -->
+            <a-light type="ambient" color="#BBB" intensity="0.7"></a-light>
+            <a-light type="directional" color="#FFF" intensity="1" position="-1 1 2"></a-light>
         </a-marker>
         
         <a-entity camera></a-entity>
@@ -154,8 +154,6 @@
                 const currentUrl = carModel.getAttribute('gltf-model');
                 carModel.setAttribute('gltf-model', '');
                 setTimeout(() => {
-                    carModel.setAttribute('visible', 'false');
-                    tempCar.setAttribute('visible', 'true');
                     carModel.setAttribute('gltf-model', currentUrl);
                     updateDebug('Model reload attempted');
                 }, 500);
@@ -164,13 +162,10 @@
             // Initial status
             updateDebug('Initializing... waiting for model to load');
             
-            // Check if marker is found with more robust detection
+            // Check if marker is found
             const marker = document.querySelector('a-marker');
-            
             marker.addEventListener('markerFound', function() {
                 updateDebug('✅ Marker found');
-                // Make sure everything is visible when marker is detected
-                marker.object3D.visible = true;
             });
             
             marker.addEventListener('markerLost', function() {
@@ -182,16 +177,6 @@
             scene.addEventListener('loaded', function() {
                 updateDebug('✅ Scene loaded');
             });
-            
-            // Try to improve stability by monitoring visibility
-            function checkVisibility() {
-                if (marker.object3D.visible && !carModel.getAttribute('visible') && carModel.getAttribute('gltf-model') !== '') {
-                    updateDebug('Ensuring model visibility');
-                    tempCar.setAttribute('visible', true);
-                }
-                requestAnimationFrame(checkVisibility);
-            }
-            checkVisibility();
         });
     </script>
 </body>
