@@ -63,14 +63,14 @@
             </a-plane>
             
             <!-- Car entity -->
-            <a-entity position="0 0.5 0" rotation="0 0 0" scale="1 1 1">
+            <a-entity position="0 0.5 0" rotation="0 90 0" scale="0.5 0.5 0.5">
                 <!-- Temporary placeholder car -->
                 <a-box id="temp-car" color="red" width="1" height="0.5" depth="2" visible="true"></a-box>
                 
                 <!-- Your actual car model - using direct URL to GitHub -->
                 <a-entity 
                     id="car-model" 
-                    gltf-model="car-1.glb" 
+                    gltf-model="https://raw.githubusercontent.com/TKvdM/webar-jdm-cube/main/assets/scene.glb" 
                     visible="false">
                 </a-entity>
             </a-entity>
