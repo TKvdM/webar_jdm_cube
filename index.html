@@ -53,22 +53,24 @@
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
         <!-- Road surface with moving stripes -->
         <a-marker preset="hiro">
-            <!-- Asphalt Road -->
-              <a-plane width="4" height="10" rotation="-90 90 0" position="0 0 0" color="#555555">
-                <!-- Animated White Lines (Centered) -->
-                <a-plane width="0.1" height="1" color="white" position="0 5 0.01"
-                         animation="property: position.y; from: 5; to: -5; dur: 2000; easing: linear; loop: true">
-                </a-plane>
-                <a-plane width="0.1" height="1" color="white" position="0 1.66 0.01"
-                         animation="property: position.y; from: 6.66; to: -3.33; dur: 2000; easing: linear; loop: true">
-                </a-plane>
-                <a-plane width="0.1" height="1" color="white" position="0 -1.66 0.01"
-                         animation="property: position.y; from: 3.33; to: -6.66; dur: 2000; easing: linear; loop: true">
-                </a-plane>
-                <a-plane width="0.1" height="1" color="white" position="0 -5 0.01"
-                         animation="property: position.y; from: 0; to: -10; dur: 2000; easing: linear; loop: true">
-                </a-plane>
-              </a-plane>
+               <!-- ROAD PLANE -->
+                  <a-plane width="4" height="10" rotation="-90 0 0" position="0 0 0" color="#555555">
+                    <!-- Repeating White Line Texture -->
+                    <a-plane 
+                      width="0.2" 
+                      height="30" 
+                      rotation="-90 0 0" 
+                      position="0 0 0.01" 
+                      color="white"
+                      material="shader: flat; src: #dashTexture; transparent: true; repeat: 1 10"
+                      animation="property: material.offset.y; from: 0; to: -1; dur: 2000; easing: linear; loop: true">
+                    </a-plane>
+                  </a-plane>
+                
+                  <!-- ASSET DEFINITION FOR THE DASH TEXTURE -->
+                  <a-assets>
+                    <img id="dashTexture" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAACkCAYAAABkTcU6AAAACXBIWXMAAA7EAAAOxAGVKw4bAAAANElEQVQYV2NgwAH/GZTx8/M/AwMDM8xjAwPDf4f5PwMDw3+F+f8DgwgACsTkUesXl7QAAAABJRU5ErkJggg==" />
+                  </a-assets>
             
               <!-- Top & Bottom Mask Planes to hide overflow -->
               <a-plane width="4" height="2" rotation="-90 90 0" position="0 6 0.02" color="#000000"></a-plane>
