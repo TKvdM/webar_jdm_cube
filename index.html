@@ -5,32 +5,28 @@
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <title>WebAR Car Showcase</title>
-    <!-- Use older but stable versions for WebAR -->
     <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <style>
-        body {
+        html, body {
             margin: 0;
             padding: 0;
             overflow: hidden;
-            position: fixed;
             width: 100%;
-            height: 100%;
+            background: black;
         }
-        
-        /* Fixed positioning for UI elements */
+
+        /* Scene canvas + UI container */
+        .a-canvas,
         #ui-container {
-            position: fixed;
+            position: absolute !important;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Let AR scene capture events */
-            z-index: 1000;
+            width: 100% !important;
         }
-        
+
         #debug-panel {
-            position: fixed;
+            position: absolute;
             top: 10px;
             left: 10px;
             right: 10px;
@@ -44,10 +40,11 @@
             overflow: auto;
             max-height: 30%;
             pointer-events: auto;
+            z-index: 1000;
         }
-        
+
         .ar-controls {
-            position: fixed;
+            position: absolute;
             bottom: 20px;
             left: 0;
             right: 0;
@@ -55,8 +52,9 @@
             justify-content: center;
             gap: 10px;
             pointer-events: auto;
+            z-index: 1000;
         }
-        
+
         .ar-button {
             padding: 12px 20px;
             background: rgba(0, 0, 0, 0.7);
@@ -64,100 +62,83 @@
             border: none;
             border-radius: 5px;
             font-weight: bold;
-            font-size: 16px; /* Larger for better touch targets */
-            min-width: 120px; /* Ensure buttons are large enough on small screens */
+            font-size: 16px;
+            min-width: 120px;
         }
-        
-        /* Make sure A-Frame is full screen */
-        .a-canvas {
-            width: 100% !important;
-            height: 100% !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            z-index: 1 !important;
-        }
-        
-        /* Ensure AR content is displayed properly */
+
         #arjs-video {
             object-fit: cover !important;
         }
     </style>
 </head>
 <body>
-    <!-- AR Scene First (lower z-index) -->
     <a-scene embedded 
-        arjs="sourceType: webcam; 
-              debugUIEnabled: false; 
-              deviceOrientation: true;
-              cameraParametersUrl: camera_para.dat;
-              maxDetectionRate: 60;"
+        arjs="sourceType: webcam; debugUIEnabled: false; deviceOrientation: true;
+              cameraParametersUrl: camera_para.dat; maxDetectionRate: 60;"
         vr-mode-ui="enabled: false"
         renderer="antialias: true; alpha: true; precision: mediump;">
         
-        <!-- Road surface with moving stripes -->
         <a-marker preset="hiro">
-            <!-- ROAD PLANE -->
+            <!-- Road -->
             <a-plane width="4" height="10" rotation="-90 0 0" position="0 0 0" color="#555555">
-                <!-- White Line -->
                 <a-plane 
-                  width="0.2" 
-                  height="10" 
-                  rotation="0 0 0" 
-                  position="0 0 0.01" 
-                  color="#FFFFFF">
+                    width="0.2" 
+                    height="10" 
+                    rotation="0 0 0" 
+                    position="0 0 0.01" 
+                    color="#FFFFFF">
                 </a-plane>
             </a-plane>
-            
-            <!-- Car entity - centered and properly oriented -->
+
+            <!-- Car -->
             <a-entity position="0 0.5 0" rotation="0 180 0" scale="0.5 0.5 0.5">
-                <!-- Temporary placeholder car -->
                 <a-box id="temp-car" color="red" width="1.5" height="0.8" depth="3" visible="true"></a-box>
-                
-                <!-- Your actual car model -->
-                <a-entity 
-                    id="car-model" 
-                    gltf-model="car-1.glb" 
-                    visible="false">
-                </a-entity>
+                <a-entity id="car-model" gltf-model="car-1.glb" visible="false"></a-entity>
             </a-entity>
-            
-            <!-- Add lighting to better see the model -->
+
             <a-light type="ambient" color="#BBB" intensity="0.7"></a-light>
             <a-light type="directional" color="#FFF" intensity="1" position="-1 1 2"></a-light>
         </a-marker>
-        
+
         <a-entity camera></a-entity>
     </a-scene>
-    
-    <!-- UI Container (higher z-index) -->
+
+    <!-- UI -->
     <div id="ui-container">
         <div id="debug-panel">Model status: Initializing...</div>
-        
-        <!-- Control buttons -->
         <div class="ar-controls">
             <button class="ar-button" id="toggle-model">Toggle Model</button>
             <button class="ar-button" id="try-load">Reload Model</button>
         </div>
     </div>
-    
+
     <script>
-        // Wait for DOM to be ready
+        function setFullHeight() {
+            const height = window.innerHeight + 'px';
+            document.body.style.height = height;
+            document.querySelector('.a-canvas')?.style.setProperty('height', height, 'important');
+            document.getElementById('ui-container')?.style.setProperty('height', height, 'important');
+        }
+
+        window.addEventListener('load', setFullHeight);
+        window.addEventListener('resize', setFullHeight);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(setFullHeight, 300);
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             const debugPanel = document.getElementById('debug-panel');
             const carModel = document.getElementById('car-model');
             const tempCar = document.getElementById('temp-car');
             const toggleButton = document.getElementById('toggle-model');
             const tryLoadButton = document.getElementById('try-load');
-            
-            // Function to update debug info
+
             function updateDebug(message) {
                 const timestamp = new Date().toLocaleTimeString();
                 debugPanel.innerHTML += `<br>${timestamp}: ${message}`;
                 debugPanel.scrollTop = debugPanel.scrollHeight;
                 console.log(message);
-                
-                // Keep the debug panel from getting too long
+
                 if (debugPanel.innerHTML.length > 5000) {
                     const lines = debugPanel.innerHTML.split('<br>');
                     if (lines.length > 20) {
@@ -165,73 +146,60 @@
                     }
                 }
             }
-            
-            // Check camera permissions
+
             function checkCameraPermission() {
                 navigator.mediaDevices.getUserMedia({video: true})
-                    .then(function(stream) {
+                    .then(stream => {
                         updateDebug('✅ Camera permission granted');
                         stream.getTracks().forEach(track => track.stop());
                     })
-                    .catch(function(err) {
+                    .catch(err => {
                         updateDebug('❌ Camera access error: ' + err.message);
                     });
             }
-            
-            // Fix Android camera orientation
+
             function fixCameraOrientation() {
                 const video = document.querySelector('#arjs-video');
                 if (video) {
                     video.style.objectFit = 'cover';
                     updateDebug('Applied camera display fix');
-                    
-                    // Fix potential Android orientation issues
                     if (/Android/i.test(navigator.userAgent)) {
-                        video.style.transform = window.innerHeight > window.innerWidth ? 
+                        video.style.transform = window.innerHeight > window.innerWidth ?
                             'rotate(-90deg)' : 'none';
                     }
                 } else {
                     updateDebug('⚠️ Could not find AR.js video element');
-                    
-                    // Retry after a short delay
                     setTimeout(fixCameraOrientation, 1000);
                 }
             }
-            
-            // Fix Android compatibility issues
+
             function fixAndroidDisplay() {
-                // Force redraw of UI elements
                 setTimeout(() => {
                     document.body.style.visibility = 'hidden';
-                    document.body.offsetHeight; // Trigger reflow
+                    document.body.offsetHeight;
                     document.body.style.visibility = 'visible';
                 }, 300);
-                
-                // Ensure UI is on top
+
                 document.getElementById('ui-container').style.zIndex = '1000';
-                
-                // Fix Android button sizing
+
                 if (/Android/i.test(navigator.userAgent)) {
                     document.querySelectorAll('.ar-button').forEach(btn => {
-                        btn.style.padding = '15px 25px'; // Larger buttons for Android
+                        btn.style.padding = '15px 25px';
                     });
                     updateDebug('Applied Android UI fixes');
                 }
             }
-            
-            // Model loaded successfully
-            carModel.addEventListener('model-loaded', function(evt) {
+
+            carModel.addEventListener('model-loaded', function() {
                 updateDebug('✅ Model loaded successfully!');
                 tempCar.setAttribute('visible', 'false');
                 carModel.setAttribute('visible', 'true');
             });
-            
-            // Model failed to load
+
             carModel.addEventListener('model-error', function(evt) {
-                updateDebug('❌ Error loading model: ' + (evt.detail.message || "Unknown error"));
+                updateDebug('❌ Error loading model: ' + (evt.detail?.message || "Unknown error"));
                 tempCar.setAttribute('visible', 'true');
-                
-                // Try a CORS check - use your actual model URL
+
                 fetch('car-1.glb', {method: 'HEAD'})
                     .then(response => {
                         if (response.ok) {
@@ -244,19 +212,16 @@
                         updateDebug(`❌ Network error: ${error.message}`);
                     });
             });
-            
-            // Toggle button functionality
+
             toggleButton.addEventListener('click', function() {
                 const isModelVisible = carModel.getAttribute('visible') === 'true';
                 updateDebug(`Toggling visibility: model=${!isModelVisible}, placeholder=${isModelVisible}`);
                 carModel.setAttribute('visible', !isModelVisible);
                 tempCar.setAttribute('visible', isModelVisible);
             });
-            
-            // Reload button functionality
+
             tryLoadButton.addEventListener('click', function() {
                 updateDebug('Attempting to reload model...');
-                // Remove and re-add the model to force reload
                 const currentUrl = carModel.getAttribute('gltf-model');
                 carModel.setAttribute('gltf-model', '');
                 setTimeout(() => {
@@ -264,44 +229,21 @@
                     updateDebug('Model reload attempted');
                 }, 500);
             });
-            
-            // Check if marker is found
+
             const marker = document.querySelector('a-marker');
-            marker.addEventListener('markerFound', function() {
-                updateDebug('✅ Marker found');
-            });
-            
-            marker.addEventListener('markerLost', function() {
-                updateDebug('❌ Marker lost');
-            });
-            
-            // Check scene loading
+            marker.addEventListener('markerFound', () => updateDebug('✅ Marker found'));
+            marker.addEventListener('markerLost', () => updateDebug('❌ Marker lost'));
+
             const scene = document.querySelector('a-scene');
             scene.addEventListener('loaded', function() {
                 updateDebug('✅ Scene loaded');
-                
-                // Apply fixes after scene loads
                 setTimeout(() => {
                     checkCameraPermission();
                     fixCameraOrientation();
                     fixAndroidDisplay();
+                    setFullHeight();
                 }, 1000);
             });
-            
-            // Handle window resize and orientation changes
-            window.addEventListener('resize', function() {
-                updateDebug('Window resized, adjusting UI');
-                fixCameraOrientation();
-                fixAndroidDisplay();
-            });
-            
-            window.addEventListener('orientationchange', function() {
-                updateDebug('Orientation changed, adjusting display');
-                setTimeout(fixCameraOrientation, 500);
-            });
-            
-            // Initial status
-            updateDebug('Initializing... waiting for scene to load');
         });
     </script>
 </body>
