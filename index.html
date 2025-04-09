@@ -1,250 +1,175 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>WebAR Car Showcase</title>
-    <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            width: 100%;
-            background: black;
-        }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>WebAR Car Showcase (Fixed)</title>
 
-        /* Scene canvas + UI container */
-        .a-canvas,
-        #ui-container {
-            position: absolute !important;
-            top: 0;
-            left: 0;
-            width: 100% !important;
-        }
+  <!-- A-Frame + AR.js -->
+  <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 
-        #debug-panel {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 12px;
-            max-width: calc(100% - 20px);
-            overflow: auto;
-            max-height: 30%;
-            pointer-events: auto;
-            z-index: 1000;
-        }
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
 
-        .ar-controls {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            pointer-events: auto;
-            z-index: 1000;
-        }
+    .ar-controls {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      z-index: 10;
+      pointer-events: auto;
+    }
 
-        .ar-button {
-            padding: 12px 20px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-            font-size: 16px;
-            min-width: 120px;
-        }
+    .ar-button {
+      padding: 12px 20px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+    }
 
-        #arjs-video {
-            object-fit: cover !important;
-        }
-    </style>
+    #debug-panel {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      z-index: 10;
+      max-width: 85%;
+      max-height: 30%;
+      overflow-y: auto;
+      pointer-events: none;
+    }
+  </style>
 </head>
+
 <body>
-    <a-scene embedded 
-        arjs="sourceType: webcam; debugUIEnabled: false; deviceOrientation: true;
-              cameraParametersUrl: camera_para.dat; maxDetectionRate: 60;"
-        vr-mode-ui="enabled: false"
-        renderer="antialias: true; alpha: true; precision: mediump;">
-        
-        <a-marker preset="hiro">
-            <!-- Road -->
-            <a-plane width="4" height="10" rotation="-90 0 0" position="0 0 0" color="#555555">
-                <a-plane 
-                    width="0.2" 
-                    height="10" 
-                    rotation="0 0 0" 
-                    position="0 0 0.01" 
-                    color="#FFFFFF">
-                </a-plane>
-            </a-plane>
+  <div id="debug-panel">Model status: Initializing...</div>
 
-            <!-- Car -->
-            <a-entity position="0 0.5 0" rotation="0 180 0" scale="0.5 0.5 0.5">
-                <a-box id="temp-car" color="red" width="1.5" height="0.8" depth="3" visible="true"></a-box>
-                <a-entity id="car-model" gltf-model="car-1.glb" visible="false"></a-entity>
-            </a-entity>
+  <a-scene
+    arjs="sourceType: webcam; debugUIEnabled: false;"
+    vr-mode-ui="enabled: false"
+    renderer="logarithmicDepthBuffer: true;"
+  >
 
-            <a-light type="ambient" color="#BBB" intensity="0.7"></a-light>
-            <a-light type="directional" color="#FFF" intensity="1" position="-1 1 2"></a-light>
-        </a-marker>
+    <!-- Camera -->
+    <a-entity camera></a-entity>
 
-        <a-entity camera></a-entity>
-    </a-scene>
+    <!-- Marker -->
+    <a-marker preset="hiro">
+      <!-- Road -->
+      <a-plane width="4" height="10" rotation="-90 0 0" position="0 0.01 0" color="#555">
+        <a-plane 
+          width="0.2" 
+          height="30" 
+          position="0 0 0.01" 
+          rotation="0 0 0" 
+          color="white">
+        </a-plane>
+      </a-plane>
 
-    <!-- UI -->
-    <div id="ui-container">
-        <div id="debug-panel">Model status: Initializing...</div>
-        <div class="ar-controls">
-            <button class="ar-button" id="toggle-model">Toggle Model</button>
-            <button class="ar-button" id="try-load">Reload Model</button>
-        </div>
-    </div>
+      <!-- Hide top/bottom overflow -->
+      <a-plane width="4" height="2" rotation="-90 0 0" position="0 0.01 5.1" color="#000"></a-plane>
+      <a-plane width="4" height="2" rotation="-90 0 0" position="0 0.01 -5.1" color="#000"></a-plane>
 
-    <script>
-        function setFullHeight() {
-            const height = window.innerHeight + 'px';
-            document.body.style.height = height;
-            document.querySelector('.a-canvas')?.style.setProperty('height', height, 'important');
-            document.getElementById('ui-container')?.style.setProperty('height', height, 'important');
-        }
+      <!-- Car -->
+      <a-entity position="0 0.5 1.5" rotation="0 180 0" scale="0.5 0.5 0.5">
+        <a-box id="temp-car" color="red" width="1.5" height="0.8" depth="3" visible="true"></a-box>
+        <a-entity 
+          id="car-model"
+          gltf-model="https://raw.githubusercontent.com/TKvdM/webar-jdm-cube/main/assets/scene.glb" 
+          visible="false">
+        </a-entity>
+      </a-entity>
 
-        window.addEventListener('load', setFullHeight);
-        window.addEventListener('resize', setFullHeight);
-        window.addEventListener('orientationchange', () => {
-            setTimeout(setFullHeight, 300);
-        });
+      <!-- Lighting -->
+      <a-light type="ambient" color="#BBB" intensity="0.6"></a-light>
+      <a-light type="directional" color="#FFF" intensity="1.2" position="1 2 2"></a-light>
+    </a-marker>
+  </a-scene>
 
-        document.addEventListener('DOMContentLoaded', function() {
-            const debugPanel = document.getElementById('debug-panel');
-            const carModel = document.getElementById('car-model');
-            const tempCar = document.getElementById('temp-car');
-            const toggleButton = document.getElementById('toggle-model');
-            const tryLoadButton = document.getElementById('try-load');
+  <!-- UI Controls -->
+  <div class="ar-controls">
+    <button class="ar-button" id="toggle-model">Toggle Model/Placeholder</button>
+    <button class="ar-button" id="try-load">Reload Model</button>
+  </div>
 
-            function updateDebug(message) {
-                const timestamp = new Date().toLocaleTimeString();
-                debugPanel.innerHTML += `<br>${timestamp}: ${message}`;
-                debugPanel.scrollTop = debugPanel.scrollHeight;
-                console.log(message);
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const debugPanel = document.getElementById('debug-panel');
+      const carModel = document.getElementById('car-model');
+      const tempCar = document.getElementById('temp-car');
+      const toggleButton = document.getElementById('toggle-model');
+      const tryLoadButton = document.getElementById('try-load');
 
-                if (debugPanel.innerHTML.length > 5000) {
-                    const lines = debugPanel.innerHTML.split('<br>');
-                    if (lines.length > 20) {
-                        debugPanel.innerHTML = lines.slice(-20).join('<br>');
-                    }
-                }
+      function updateDebug(message) {
+        const timestamp = new Date().toLocaleTimeString();
+        debugPanel.innerHTML += `<br>${timestamp}: ${message}`;
+        debugPanel.scrollTop = debugPanel.scrollHeight;
+        console.log(message);
+      }
+
+      carModel.addEventListener('model-loaded', () => {
+        updateDebug('✅ Model loaded');
+        tempCar.setAttribute('visible', 'false');
+        carModel.setAttribute('visible', 'true');
+      });
+
+      carModel.addEventListener('model-error', (evt) => {
+        updateDebug('❌ Model load error: ' + evt.detail?.message);
+        tempCar.setAttribute('visible', 'true');
+
+        fetch(carModel.getAttribute('gltf-model'), { method: 'HEAD' })
+          .then((response) => {
+            if (response.ok) {
+              updateDebug('✅ Model URL is reachable. Might be a CORS issue.');
+            } else {
+              updateDebug(`❌ Model URL returned status ${response.status}`);
             }
+          })
+          .catch((error) => {
+            updateDebug(`❌ Network error: ${error.message}`);
+          });
+      });
 
-            function checkCameraPermission() {
-                navigator.mediaDevices.getUserMedia({video: true})
-                    .then(stream => {
-                        updateDebug('✅ Camera permission granted');
-                        stream.getTracks().forEach(track => track.stop());
-                    })
-                    .catch(err => {
-                        updateDebug('❌ Camera access error: ' + err.message);
-                    });
-            }
+      toggleButton.addEventListener('click', () => {
+        const isModelVisible = carModel.getAttribute('visible') === 'true';
+        updateDebug(`Toggling model: now ${!isModelVisible}`);
+        carModel.setAttribute('visible', !isModelVisible);
+        tempCar.setAttribute('visible', isModelVisible);
+      });
 
-            function fixCameraOrientation() {
-                const video = document.querySelector('#arjs-video');
-                if (video) {
-                    video.style.objectFit = 'cover';
-                    updateDebug('Applied camera display fix');
-                    if (/Android/i.test(navigator.userAgent)) {
-                        video.style.transform = window.innerHeight > window.innerWidth ?
-                            'rotate(-90deg)' : 'none';
-                    }
-                } else {
-                    updateDebug('⚠️ Could not find AR.js video element');
-                    setTimeout(fixCameraOrientation, 1000);
-                }
-            }
+      tryLoadButton.addEventListener('click', () => {
+        updateDebug('🔄 Reloading model...');
+        const currentUrl = carModel.getAttribute('gltf-model');
+        carModel.setAttribute('gltf-model', '');
+        setTimeout(() => {
+          carModel.setAttribute('gltf-model', currentUrl);
+          updateDebug('Model reload attempted');
+        }, 500);
+      });
 
-            function fixAndroidDisplay() {
-                setTimeout(() => {
-                    document.body.style.visibility = 'hidden';
-                    document.body.offsetHeight;
-                    document.body.style.visibility = 'visible';
-                }, 300);
+      const marker = document.querySelector('a-marker');
+      marker.addEventListener('markerFound', () => updateDebug('✅ Marker found'));
+      marker.addEventListener('markerLost', () => updateDebug('❌ Marker lost'));
 
-                document.getElementById('ui-container').style.zIndex = '1000';
-
-                if (/Android/i.test(navigator.userAgent)) {
-                    document.querySelectorAll('.ar-button').forEach(btn => {
-                        btn.style.padding = '15px 25px';
-                    });
-                    updateDebug('Applied Android UI fixes');
-                }
-            }
-
-            carModel.addEventListener('model-loaded', function() {
-                updateDebug('✅ Model loaded successfully!');
-                tempCar.setAttribute('visible', 'false');
-                carModel.setAttribute('visible', 'true');
-            });
-
-            carModel.addEventListener('model-error', function(evt) {
-                updateDebug('❌ Error loading model: ' + (evt.detail?.message || "Unknown error"));
-                tempCar.setAttribute('visible', 'true');
-
-                fetch('car-1.glb', {method: 'HEAD'})
-                    .then(response => {
-                        if (response.ok) {
-                            updateDebug('✅ Model URL exists but may have CORS issues');
-                        } else {
-                            updateDebug(`❌ Model URL returned ${response.status}`);
-                        }
-                    })
-                    .catch(error => {
-                        updateDebug(`❌ Network error: ${error.message}`);
-                    });
-            });
-
-            toggleButton.addEventListener('click', function() {
-                const isModelVisible = carModel.getAttribute('visible') === 'true';
-                updateDebug(`Toggling visibility: model=${!isModelVisible}, placeholder=${isModelVisible}`);
-                carModel.setAttribute('visible', !isModelVisible);
-                tempCar.setAttribute('visible', isModelVisible);
-            });
-
-            tryLoadButton.addEventListener('click', function() {
-                updateDebug('Attempting to reload model...');
-                const currentUrl = carModel.getAttribute('gltf-model');
-                carModel.setAttribute('gltf-model', '');
-                setTimeout(() => {
-                    carModel.setAttribute('gltf-model', currentUrl);
-                    updateDebug('Model reload attempted');
-                }, 500);
-            });
-
-            const marker = document.querySelector('a-marker');
-            marker.addEventListener('markerFound', () => updateDebug('✅ Marker found'));
-            marker.addEventListener('markerLost', () => updateDebug('❌ Marker lost'));
-
-            const scene = document.querySelector('a-scene');
-            scene.addEventListener('loaded', function() {
-                updateDebug('✅ Scene loaded');
-                setTimeout(() => {
-                    checkCameraPermission();
-                    fixCameraOrientation();
-                    fixAndroidDisplay();
-                    setFullHeight();
-                }, 1000);
-            });
-        });
-    </script>
+      const scene = document.querySelector('a-scene');
+      scene.addEventListener('loaded', () => updateDebug('✅ Scene loaded'));
+    });
+  </script>
 </body>
 </html>
