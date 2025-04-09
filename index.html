@@ -3,8 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>WebAR Car Showcase</title>
-    <!-- Use older but more stable versions for WebAR -->
+    <!-- Use older but stable versions for WebAR -->
     <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <style>
@@ -85,8 +86,14 @@
 </head>
 <body>
     <!-- AR Scene First (lower z-index) -->
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; cameraParametersUrl: camera_para.dat;"
-        vr-mode-ui="enabled: false">
+    <a-scene embedded 
+        arjs="sourceType: webcam; 
+              debugUIEnabled: false; 
+              deviceOrientation: true;
+              cameraParametersUrl: camera_para.dat;
+              maxDetectionRate: 60;"
+        vr-mode-ui="enabled: false"
+        renderer="antialias: true; alpha: true; precision: mediump;">
         
         <!-- Road surface with moving stripes -->
         <a-marker preset="hiro">
@@ -159,6 +166,38 @@
                 }
             }
             
+            // Check camera permissions
+            function checkCameraPermission() {
+                navigator.mediaDevices.getUserMedia({video: true})
+                    .then(function(stream) {
+                        updateDebug('✅ Camera permission granted');
+                        stream.getTracks().forEach(track => track.stop());
+                    })
+                    .catch(function(err) {
+                        updateDebug('❌ Camera access error: ' + err.message);
+                    });
+            }
+            
+            // Fix Android camera orientation
+            function fixCameraOrientation() {
+                const video = document.querySelector('#arjs-video');
+                if (video) {
+                    video.style.objectFit = 'cover';
+                    updateDebug('Applied camera display fix');
+                    
+                    // Fix potential Android orientation issues
+                    if (/Android/i.test(navigator.userAgent)) {
+                        video.style.transform = window.innerHeight > window.innerWidth ? 
+                            'rotate(-90deg)' : 'none';
+                    }
+                } else {
+                    updateDebug('⚠️ Could not find AR.js video element');
+                    
+                    // Retry after a short delay
+                    setTimeout(fixCameraOrientation, 1000);
+                }
+            }
+            
             // Fix Android compatibility issues
             function fixAndroidDisplay() {
                 // Force redraw of UI elements
@@ -170,18 +209,14 @@
                 
                 // Ensure UI is on top
                 document.getElementById('ui-container').style.zIndex = '1000';
-            }
-            
-            // Check if Android
-            const isAndroid = /Android/i.test(navigator.userAgent);
-            if (isAndroid) {
-                updateDebug('Android device detected, applying fixes');
-                fixAndroidDisplay();
                 
-                // Additional Android-specific fixes
-                document.querySelectorAll('.ar-button').forEach(btn => {
-                    btn.style.padding = '15px 25px'; // Larger buttons for Android
-                });
+                // Fix Android button sizing
+                if (/Android/i.test(navigator.userAgent)) {
+                    document.querySelectorAll('.ar-button').forEach(btn => {
+                        btn.style.padding = '15px 25px'; // Larger buttons for Android
+                    });
+                    updateDebug('Applied Android UI fixes');
+                }
             }
             
             // Model loaded successfully
@@ -196,8 +231,8 @@
                 updateDebug('❌ Error loading model: ' + (evt.detail.message || "Unknown error"));
                 tempCar.setAttribute('visible', 'true');
                 
-                // Try a CORS check
-                fetch('https://raw.githubusercontent.com/TKvdM/webar-jdm-cube/main/assets/scene.glb', {method: 'HEAD'})
+                // Try a CORS check - use your actual model URL
+                fetch('car-1.glb', {method: 'HEAD'})
                     .then(response => {
                         if (response.ok) {
                             updateDebug('✅ Model URL exists but may have CORS issues');
@@ -230,9 +265,6 @@
                 }, 500);
             });
             
-            // Initial status
-            updateDebug('Initializing... waiting for model to load');
-            
             // Check if marker is found
             const marker = document.querySelector('a-marker');
             marker.addEventListener('markerFound', function() {
@@ -247,15 +279,29 @@
             const scene = document.querySelector('a-scene');
             scene.addEventListener('loaded', function() {
                 updateDebug('✅ Scene loaded');
-                // Force UI refresh after scene loads
-                setTimeout(fixAndroidDisplay, 500);
+                
+                // Apply fixes after scene loads
+                setTimeout(() => {
+                    checkCameraPermission();
+                    fixCameraOrientation();
+                    fixAndroidDisplay();
+                }, 1000);
             });
             
-            // Handle window resize
+            // Handle window resize and orientation changes
             window.addEventListener('resize', function() {
                 updateDebug('Window resized, adjusting UI');
+                fixCameraOrientation();
                 fixAndroidDisplay();
             });
+            
+            window.addEventListener('orientationchange', function() {
+                updateDebug('Orientation changed, adjusting display');
+                setTimeout(fixCameraOrientation, 500);
+            });
+            
+            // Initial status
+            updateDebug('Initializing... waiting for scene to load');
         });
     </script>
 </body>
