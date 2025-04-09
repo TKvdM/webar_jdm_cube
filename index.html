@@ -53,49 +53,47 @@
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
         <!-- Define assets -->
         <a-assets>
-            <img id="dashTexture" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=" />
+            <img id="dashTexture" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAQCAYAAADXnxW3AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6QUQxQzM3MTdEQTVFMTFFQTlEMTlFQUE4QkIxOTI5RjgiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6QUQxQzM3MThEQTVFMTFFQTlEMTlFQUE4QkIxOTI5RjgiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpBRDFDMzcxNURBNUUxMUVBOUQxOUVBQThCQjE5MjlGOCIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpBRDFDMzcxNkRBNUUxMUVBOUQxOUVBQThCQjE5MjlGOCIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PsQhXeYAAAAtSURBVHjaYmJgYPgPxEwQwsTAwMgEJJggJCOUzcQAIUEuQGhmgOqDcAECDABL1wbYB1grywAAAABJRU5ErkJggg==" />
         </a-assets>
         
         <!-- Road surface with moving stripes -->
         <a-marker preset="hiro">
-            <!-- ROAD PLANE - Now positioned flat on the ground -->
-            <a-plane width="4" height="10" rotation="0 0 0" position="0 0 0" color="#555555">
-                <!-- Repeating White Line Texture -->
-                <a-plane 
-                  width="0.2" 
-                  height="30" 
-                  rotation="0 0 0" 
-                  position="0 0 0.01" 
-                  color="white"
-                  material="shader: flat; src: #dashTexture; transparent: true; repeat: 1 10"
-                  animation="property: material.offset.y; from: 0; to: -1; dur: 2000; easing: linear; loop: true">
+            <!-- Main container to rotate everything properly -->
+            <a-entity position="0 0 0" rotation="0 0 0">
+                <!-- ROAD PLANE - Raised slightly above marker to be visible -->
+                <a-plane width="5" height="10" rotation="-90 0 0" position="0 0.01 0" color="#555555">
+                    <!-- Repeating White Line Texture -->
+                    <a-plane 
+                      width="0.2" 
+                      height="10" 
+                      rotation="0 0 0" 
+                      position="0 0 0.005" 
+                      color="white"
+                      material="shader: flat; src: #dashTexture; transparent: true; repeat: 1 10"
+                      animation="property: material.offset.y; from: 0; to: -10; dur: 8000; easing: linear; loop: true">
+                    </a-plane>
                 </a-plane>
-            </a-plane>
-            
-            <!-- Top & Bottom Mask Planes to hide overflow - adjusted to match new orientation -->
-            <a-plane width="4" height="2" rotation="0 0 0" position="0 6 0.02" color="#000000"></a-plane>
-            <a-plane width="4" height="2" rotation="0 0 0" position="0 -6 0.02" color="#000000"></a-plane>
-            
-            <!-- Car entity - adjusted to be positioned correctly on the road with side view -->
-            <a-entity position="0 0.25 -2" rotation="0 90 0" scale="1 1 1">
-                <!-- Temporary placeholder car -->
-                <a-box id="temp-car" color="red" width="1" height="0.5" depth="2" visible="true"></a-box>
                 
-                <!-- Your actual car model - using direct URL to GitHub -->
-                <a-entity 
-                    id="car-model" 
-                    gltf-model="car-1.glb" 
-                    visible="false">
+                <!-- Car entity - adjusted positioning and rotation -->
+                <a-entity position="0 0.5 -3" rotation="0 180 0" scale="0.5 0.5 0.5">
+                    <!-- Temporary placeholder car -->
+                    <a-box id="temp-car" color="red" width="1.5" height="0.8" depth="3" visible="true"></a-box>
+                    
+                    <!-- Your actual car model -->
+                    <a-entity 
+                        id="car-model" 
+                        gltf-model="car-1.glb" 
+                        visible="false">
+                    </a-entity>
                 </a-entity>
+                
+                <!-- Add lighting to better see the model -->
+                <a-light type="ambient" color="#BBB" intensity="0.7"></a-light>
+                <a-light type="directional" color="#FFF" intensity="1" position="-1 1 2"></a-light>
             </a-entity>
-            
-            <!-- Add lighting to better see the model -->
-            <a-light type="ambient" color="#BBB" intensity="0.7"></a-light>
-            <a-light type="directional" color="#FFF" intensity="1" position="-1 1 2"></a-light>
         </a-marker>
         
-        <!-- Camera with a slight angle from the top -->
-        <a-entity camera look-controls position="0 1.6 0" rotation="-15 0 0"></a-entity>
+        <a-entity camera></a-entity>
     </a-scene>
     
     <!-- Control buttons -->
