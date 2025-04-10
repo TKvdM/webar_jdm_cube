@@ -108,8 +108,15 @@
       if (navigator.xr && navigator.xr.isSessionSupported) {
         navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
           if (supported) {
-            initAR();
-            document.getElementById('enter-ar').style.display = 'none';
+            // Request permission to access camera
+            navigator.mediaDevices.getUserMedia({ video: true })
+              .then(() => {
+                initAR();
+                document.getElementById('enter-ar').style.display = 'none';
+              })
+              .catch((err) => {
+                alert("Camera permission denied: " + err);
+              });
           } else {
             alert('AR not supported on this device.');
           }
