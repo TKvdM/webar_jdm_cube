@@ -51,33 +51,33 @@
     <div id="debug-panel">Model status: Initializing...</div>
     
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+        <!-- Define assets -->
+        <a-assets>
+            <img id="dashTexture" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=" />
+        </a-assets>
+        
         <!-- Road surface with moving stripes -->
         <a-marker preset="hiro">
-               <!-- ROAD PLANE -->
-                  <a-plane width="4" height="10" rotation="-90 0 0" position="0 0 0" color="#555555">
-                    <!-- Repeating White Line Texture -->
-                    <a-plane 
-                      width="0.2" 
-                      height="30" 
-                      rotation="-90 0 0" 
-                      position="0 0 0.01" 
-                      color="white"
-                      material="shader: flat; src: #dashTexture; transparent: true; repeat: 1 10"
-                      animation="property: material.offset.y; from: 0; to: -1; dur: 2000; easing: linear; loop: true">
-                    </a-plane>
-                  </a-plane>
-                
-                  <!-- ASSET DEFINITION FOR THE DASH TEXTURE -->
-                  <a-assets>
-                    <img id="dashTexture" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAACkCAYAAABkTcU6AAAACXBIWXMAAA7EAAAOxAGVKw4bAAAANElEQVQYV2NgwAH/GZTx8/M/AwMDM8xjAwPDf4f5PwMDw3+F+f8DgwgACsTkUesXl7QAAAABJRU5ErkJggg==" />
-                  </a-assets>
+            <!-- ROAD PLANE - Now positioned flat on the ground -->
+            <a-plane width="4" height="10" rotation="0 0 0" position="0 0 0" color="#555555">
+                <!-- Repeating White Line Texture -->
+                <a-plane 
+                  width="0.2" 
+                  height="30" 
+                  rotation="0 0 0" 
+                  position="0 0 0.01" 
+                  color="white"
+                  material="shader: flat; src: #dashTexture; transparent: true; repeat: 1 10"
+                  animation="property: material.offset.y; from: 0; to: -1; dur: 2000; easing: linear; loop: true">
+                </a-plane>
+            </a-plane>
             
-              <!-- Top & Bottom Mask Planes to hide overflow -->
-              <a-plane width="4" height="2" rotation="-90 90 0" position="0 6 0.02" color="#000000"></a-plane>
-              <a-plane width="4" height="2" rotation="-90 90 0" position="0 -6 0.02" color="#000000"></a-plane>
+            <!-- Top & Bottom Mask Planes to hide overflow - adjusted to match new orientation -->
+            <a-plane width="4" height="2" rotation="0 0 0" position="0 6 0.02" color="#000000"></a-plane>
+            <a-plane width="4" height="2" rotation="0 0 0" position="0 -6 0.02" color="#000000"></a-plane>
             
-            <!-- Car entity -->
-            <a-entity position="0 0.5 0" rotation="0 -90 0" scale="1 1 1">
+            <!-- Car entity - adjusted to be positioned correctly on the road with side view -->
+            <a-entity position="0 0.25 -2" rotation="0 90 0" scale="1 1 1">
                 <!-- Temporary placeholder car -->
                 <a-box id="temp-car" color="red" width="1" height="0.5" depth="2" visible="true"></a-box>
                 
@@ -94,7 +94,8 @@
             <a-light type="directional" color="#FFF" intensity="1" position="-1 1 2"></a-light>
         </a-marker>
         
-        <a-entity camera></a-entity>
+        <!-- Camera with a slight angle from the top -->
+        <a-entity camera look-controls position="0 1.6 0" rotation="-15 0 0"></a-entity>
     </a-scene>
     
     <!-- Control buttons -->
