@@ -1,200 +1,123 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WebAR Car Showcase</title>
-    <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <style>
-        body { margin: 0; overflow: hidden; }
-        .ar-controls {
-            position: absolute; bottom: 20px; left: 0; right: 0;
-            display: flex; justify-content: center; gap: 10px; z-index: 999;
-        }
-        .ar-button {
-            padding: 12px 20px; background: rgba(0, 0, 0, 0.7);
-            color: white; border: none; border-radius: 5px; font-weight: bold;
-        }
-        #debug-panel {
-            position: absolute; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.7);
-            color: white; padding: 10px; border-radius: 5px; font-family: monospace;
-            font-size: 12px; z-index: 1000; max-width: 80%; overflow: auto; max-height: 30%;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebXR Car AR</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+    #enter-ar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      z-index: 999;
+    }
+  </style>
 </head>
 <body>
-    <div id="debug-panel">Model status: Initializing...</div>
+  <button id="enter-ar">Enter AR</button>
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" renderer="colorManagement: true">
-        <a-assets>
-            <img id="road-texture" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
-        </a-assets>
-        
-        <a-marker preset="hiro">
-            <!-- Improved road with texture -->
-            <a-plane 
-                width="4" 
-                height="10" 
-                rotation="-90 0 0" 
-                position="0 0 0" 
-                color="#333333"
-                material="roughness: 1; metalness: 0">
-                
-                <!-- Road markings - center line -->
-                <a-entity id="road-markings">
-                    <a-plane 
-                        width="0.2" 
-                        height="10" 
-                        position="0 0 0.01" 
-                        color="#FFFFFF"
-                        material="src: #road-texture; repeat: 1 5; opacity: 0.9"
-                        animation="property: material.offset.y; from: 0; to: 1; dur: 2000; easing: linear; loop: true">
-                    </a-plane>
-                    
-                    <!-- Lane markings - dashed lines -->
-                    <a-entity id="lane-markings" position="-1 0 0.01">
-                        <a-plane 
-                            width="0.1" 
-                            height="0.8" 
-                            position="0 4 0" 
-                            color="white"
-                            animation="property: position.y; from: 5; to: -5; dur: 2000; easing: linear; loop: true">
-                        </a-plane>
-                        <a-plane 
-                            width="0.1" 
-                            height="0.8" 
-                            position="0 1.5 0" 
-                            color="white"
-                            animation="property: position.y; from: 2.5; to: -7.5; dur: 2000; easing: linear; loop: true">
-                        </a-plane>
-                        <a-plane 
-                            width="0.1" 
-                            height="0.8" 
-                            position="0 -1 0" 
-                            color="white"
-                            animation="property: position.y; from: 0; to: -10; dur: 2000; easing: linear; loop: true">
-                        </a-plane>
-                        <a-plane 
-                            width="0.1" 
-                            height="0.8" 
-                            position="0 -3.5 0" 
-                            color="white"
-                            animation="property: position.y; from: -2.5; to: -12.5; dur: 2000; easing: linear; loop: true">
-                        </a-plane>
-                    </a-entity>
-                    
-                    <!-- Mirrored for the other side -->
-                    <a-entity id="lane-markings-right" position="1 0 0.01">
-                        <a-plane 
-                            width="0.1" 
-                            height="0.8" 
-                            position="0 4 0" 
-                            color="white"
-                            animation="property: position.y; from: 5; to: -5; dur: 2000; easing: linear; loop: true">
-                        </a-plane>
-                        <a-plane 
-                            width="0.1" 
-                            height="0.8" 
-                            position="0 1.5 0" 
-                            color="white"
-                            animation="property: position.y; from: 2.5; to: -7.5; dur: 2000; easing: linear; loop: true">
-                        </a-plane>
-                        <a-plane 
-                            width="0.1" 
-                            height="0.8" 
-                            position="0 -1 0" 
-                            color="white"
-                            animation="property: position.y; from: 0; to: -10; dur: 2000; easing: linear; loop: true">
-                        </a-plane>
-                        <a-plane 
-                            width="0.1" 
-                            height="0.8" 
-                            position="0 -3.5 0" 
-                            color="white"
-                            animation="property: position.y; from: -2.5; to: -12.5; dur: 2000; easing: linear; loop: true">
-                        </a-plane>
-                    </a-entity>
-                </a-entity>
-            </a-plane>
+  <script type="module">
+    import * as THREE from 'https://cdn.skypack.dev/three@0.160.0';
+    import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 
-            <!-- Car entity -->
-            <a-entity position="0 0.5 0" rotation="0 0 0" scale="1 1 1">
-                <a-box id="temp-car" color="red" width="1" height="0.5" depth="2" visible="true"></a-box>
+    let scene, camera, renderer;
+    let controller, reticle, carModel;
 
-                <!-- Actual car model with animation support -->
-                <a-entity 
-                    id="car-model" 
-                    gltf-model="Untitled.glb" 
-                    animation-mixer 
-                    visible="false">
-                </a-entity>
-            </a-entity>
+    const initAR = async () => {
+      // Setup renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.xr.enabled = true;
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      document.body.appendChild(renderer.domElement);
 
-            <!-- Improved lighting -->
-            <a-light type="ambient" color="#BBB" intensity="0.7"></a-light>
-            <a-light type="directional" color="#FFF" intensity="1" position="-1 1 2"></a-light>
-            <a-light type="hemisphere" color="#FFFFFF" groundColor="#444444" intensity="1"></a-light>
-        </a-marker>
+      // Scene & camera
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera();
 
-        <a-entity camera></a-entity>
-    </a-scene>
+      // Light
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
 
-    <!-- Control buttons -->
-    <div class="ar-controls">
-        <button class="ar-button" id="toggle-model">Toggle Model/Placeholder</button>
-        <button class="ar-button" id="try-load">Reload Model</button>
-    </div>
+      // Load car model
+      const loader = new GLTFLoader();
+      loader.load('car-1.glb', (gltf) => {
+        carModel = gltf.scene;
+        carModel.scale.set(0.5, 0.5, 0.5);
+        carModel.visible = false;
+        scene.add(carModel);
+      }, undefined, (error) => {
+        console.error('Model load error:', error);
+      });
 
-    <script>
-    // Attempt to override AR.js camera stream with custom constraints
-    window.addEventListener('load', () => {
-        const tryCustomCamera = () => {
-            const scene = document.querySelector('a-scene');
+      // Reticle for placement
+      const ring = new THREE.RingGeometry(0.07, 0.09, 32).rotateX(-Math.PI / 2);
+      const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+      reticle = new THREE.Mesh(ring, material);
+      reticle.matrixAutoUpdate = false;
+      reticle.visible = false;
+      scene.add(reticle);
 
-            if (!scene || !scene.hasLoaded || !scene.components.arjs) {
-                setTimeout(tryCustomCamera, 100); // Retry until scene is ready
-                return;
-            }
+      // Start AR session
+      const session = await navigator.xr.requestSession('immersive-ar', {
+        requiredFeatures: ['hit-test', 'dom-overlay'],
+        domOverlay: { root: document.body }
+      });
+      renderer.xr.setSession(session);
 
-            const arSource = scene.components.arjs.arController?.arSource;
+      const refSpace = await session.requestReferenceSpace('local');
+      const viewerSpace = await session.requestReferenceSpace('viewer');
+      const hitTestSource = await session.requestHitTestSource({ space: viewerSpace });
 
-            if (!arSource || !arSource._deviceVideoInput) {
-                console.warn("AR.js source not ready, retrying...");
-                setTimeout(tryCustomCamera, 100);
-                return;
-            }
+      // Controller
+      controller = renderer.xr.getController(0);
+      controller.addEventListener('select', () => {
+        if (reticle.visible && carModel) {
+          carModel.position.setFromMatrixPosition(reticle.matrix);
+          carModel.visible = true;
+        }
+      });
+      scene.add(controller);
 
-            navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: { exact: "environment" },
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                },
-                audio: false
-            })
-            .then((stream) => {
-                const videoElement = arSource._deviceVideoInput;
-                videoElement.srcObject = stream;
-                videoElement.play();
+      // Render loop
+      renderer.setAnimationLoop((timestamp, frame) => {
+        if (frame) {
+          const hitTestResults = frame.getHitTestResults(hitTestSource);
+          if (hitTestResults.length > 0) {
+            const hit = hitTestResults[0];
+            const pose = hit.getPose(refSpace);
+            reticle.visible = true;
+            reticle.matrix.fromArray(pose.transform.matrix);
+          } else {
+            reticle.visible = false;
+          }
+        }
+        renderer.render(scene, camera);
+      });
+    };
 
-                console.log("✅ Custom camera stream applied");
-                const debugPanel = document.getElementById('debug-panel');
-                if (debugPanel) {
-                    debugPanel.innerHTML += `<br>${new Date().toLocaleTimeString()}: ✅ Custom camera stream applied`;
-                }
-            })
-            .catch((err) => {
-                console.warn("❌ Failed to apply custom camera constraints:", err);
-                const debugPanel = document.getElementById('debug-panel');
-                if (debugPanel) {
-                    debugPanel.innerHTML += `<br>${new Date().toLocaleTimeString()}: ❌ Failed to apply custom camera: ${err.message}`;
-                }
-            });
-        };
-
-        tryCustomCamera();
+    document.getElementById('enter-ar').addEventListener('click', () => {
+      if (navigator.xr && navigator.xr.isSessionSupported) {
+        navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+          if (supported) {
+            initAR();
+            document.getElementById('enter-ar').style.display = 'none';
+          } else {
+            alert('AR not supported on this device.');
+          }
+        });
+      } else {
+        alert('WebXR not available in this browser.');
+      }
     });
-</script>
+  </script>
 </body>
 </html>
