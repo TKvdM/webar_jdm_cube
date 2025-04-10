@@ -147,84 +147,54 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const debugPanel = document.getElementById('debug-panel');
-            const carModel = document.getElementById('car-model');
-            const tempCar = document.getElementById('temp-car');
-            const toggleButton = document.getElementById('toggle-model');
-            const tryLoadButton = document.getElementById('try-load');
+    // Attempt to override AR.js camera stream with custom constraints
+    window.addEventListener('load', () => {
+        const tryCustomCamera = () => {
+            const scene = document.querySelector('a-scene');
 
-            function updateDebug(message) {
-                const timestamp = new Date().toLocaleTimeString();
-                debugPanel.innerHTML += `<br>${timestamp}: ${message}`;
-                debugPanel.scrollTop = debugPanel.scrollHeight;
-                console.log(message);
+            if (!scene || !scene.hasLoaded || !scene.components.arjs) {
+                setTimeout(tryCustomCamera, 100); // Retry until scene is ready
+                return;
             }
 
-            carModel.addEventListener('model-loaded', function(evt) {
-                updateDebug('✅ Model loaded successfully!');
-                tempCar.setAttribute('visible', 'false');
-                carModel.setAttribute('visible', 'true');
+            const arSource = scene.components.arjs.arController?.arSource;
 
-                // Debugging animations
-                const model = evt.detail.model;
-                if (model.animations.length > 0) {
-                    updateDebug(`🎬 Animations found: ${model.animations.length}`);
-                } else {
-                    updateDebug('❌ No animations found in model!');
+            if (!arSource || !arSource._deviceVideoInput) {
+                console.warn("AR.js source not ready, retrying...");
+                setTimeout(tryCustomCamera, 100);
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { exact: "environment" },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            })
+            .then((stream) => {
+                const videoElement = arSource._deviceVideoInput;
+                videoElement.srcObject = stream;
+                videoElement.play();
+
+                console.log("✅ Custom camera stream applied");
+                const debugPanel = document.getElementById('debug-panel');
+                if (debugPanel) {
+                    debugPanel.innerHTML += `<br>${new Date().toLocaleTimeString()}: ✅ Custom camera stream applied`;
+                }
+            })
+            .catch((err) => {
+                console.warn("❌ Failed to apply custom camera constraints:", err);
+                const debugPanel = document.getElementById('debug-panel');
+                if (debugPanel) {
+                    debugPanel.innerHTML += `<br>${new Date().toLocaleTimeString()}: ❌ Failed to apply custom camera: ${err.message}`;
                 }
             });
+        };
 
-            carModel.addEventListener('model-error', function(evt) {
-                updateDebug('❌ Error loading model: ' + evt.detail.message);
-                tempCar.setAttribute('visible', 'true');
-
-                fetch('https://raw.githubusercontent.com/TKvdM/webar-jdm-cube/main/assets/scene.glb', {method: 'HEAD'})
-                    .then(response => {
-                        if (response.ok) {
-                            updateDebug('✅ Model URL exists but may have CORS issues');
-                        } else {
-                            updateDebug(`❌ Model URL returned ${response.status}`);
-                        }
-                    })
-                    .catch(error => {
-                        updateDebug(`❌ Network error: ${error.message}`);
-                    });
-            });
-
-            toggleButton.addEventListener('click', function() {
-                const isModelVisible = carModel.getAttribute('visible') === 'true';
-                updateDebug(`Toggling visibility: model=${!isModelVisible}, placeholder=${isModelVisible}`);
-                carModel.setAttribute('visible', !isModelVisible);
-                tempCar.setAttribute('visible', isModelVisible);
-            });
-
-            tryLoadButton.addEventListener('click', function() {
-                updateDebug('Attempting to reload model...');
-                const currentUrl = carModel.getAttribute('gltf-model');
-                carModel.setAttribute('gltf-model', '');
-                setTimeout(() => {
-                    carModel.setAttribute('gltf-model', currentUrl);
-                    updateDebug('Model reload attempted');
-                }, 500);
-            });
-
-            updateDebug('Initializing... waiting for model to load');
-
-            const marker = document.querySelector('a-marker');
-            marker.addEventListener('markerFound', function() {
-                updateDebug('✅ Marker found');
-            });
-
-            marker.addEventListener('markerLost', function() {
-                updateDebug('❌ Marker lost');
-            });
-
-            const scene = document.querySelector('a-scene');
-            scene.addEventListener('loaded', function() {
-                updateDebug('✅ Scene loaded');
-            });
-        });
-    </script>
+        tryCustomCamera();
+    });
+</script>
 </body>
 </html>
