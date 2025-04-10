@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebAR Car Selection</title>
+    <title>JDM Classics Car Selection</title>
     <style>
         body {
             margin: 0;
@@ -55,6 +55,7 @@
             padding: 15px;
             border-radius: 10px;
             border-left: 5px solid #ff6600;
+            max-width: 400px;
         }
         #carName {
             font-size: 24px;
@@ -62,7 +63,12 @@
         }
         #carDescription {
             font-size: 14px;
+            margin: 0 0 8px 0;
+        }
+        #carSpecs {
+            font-size: 12px;
             margin: 0;
+            color: #cccccc;
         }
         .loading {
             position: absolute;
@@ -82,8 +88,9 @@
     <div id="container">
         <canvas id="arCanvas"></canvas>
         <div id="carInfo">
-            <h2 id="carName">Sports Car</h2>
-            <p id="carDescription">A high-performance sports car with impressive handling</p>
+            <h2 id="carName">Honda NSX (1995)</h2>
+            <p id="carDescription">Iconic mid-engine sports car with exceptional handling and exotic looks</p>
+            <p id="carSpecs">Engine: 3.0L V6 VTEC | Power: 270 HP | 0-60: 5.7s</p>
         </div>
         <div id="controls">
             <button class="btn" id="prevBtn">Previous</button>
@@ -100,9 +107,21 @@
         let animationInProgress = false;
         let cars = [];
         let carInfos = [
-            { name: "Sports Car", description: "A high-performance sports car with impressive handling" },
-            { name: "SUV", description: "Rugged all-terrain vehicle with spacious interior" },
-            { name: "Muscle Car", description: "Classic American muscle with raw power and attitude" }
+            { 
+                name: "Honda NSX (1995)", 
+                description: "Iconic mid-engine sports car with exceptional handling and exotic looks",
+                specs: "Engine: 3.0L V6 VTEC | Power: 270 HP | 0-60: 5.7s"
+            },
+            { 
+                name: "Mazda RX-7 (1999)", 
+                description: "Legendary rotary-powered sports car with distinctive styling",
+                specs: "Engine: 1.3L Twin-Turbo Rotary | Power: 276 HP | 0-60: 5.3s"
+            },
+            { 
+                name: "Toyota Supra MK3 (1990)", 
+                description: "Classic GT sports car with robust engineering and iconic 7M-GTE engine",
+                specs: "Engine: 3.0L Turbo Inline-6 | Power: 232 HP | 0-60: 6.4s"
+            }
         ];
 
         // Initialize the scene
@@ -130,7 +149,7 @@
             // Create environment
             createEnvironment();
             
-            // Create car placeholders
+            // Create car models
             createCars();
             
             // Add event listeners
@@ -162,6 +181,59 @@
             spotLight.angle = Math.PI / 6;
             spotLight.penumbra = 0.5;
             scene.add(spotLight);
+            
+            // Add some street lights for night time effect
+            addStreetLights();
+        }
+
+        // Add street lights to the scene
+        function addStreetLights() {
+            const streetLightCount = 6;
+            const distance = 15;
+            
+            for (let i = 0; i < streetLightCount; i++) {
+                const side = i % 2 === 0 ? 1 : -1;
+                const poleGeometry = new THREE.CylinderGeometry(0.1, 0.1, 5, 8);
+                const poleMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x333333,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                
+                const pole = new THREE.Mesh(poleGeometry, poleMaterial);
+                pole.position.set(side * 8, 2.5, -10 - i * distance);
+                pole.castShadow = true;
+                scene.add(pole);
+                
+                // Add light fixture
+                const fixtureGeometry = new THREE.BoxGeometry(0.8, 0.3, 0.8);
+                const fixtureMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x222222,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                
+                const fixture = new THREE.Mesh(fixtureGeometry, fixtureMaterial);
+                fixture.position.set(side * 8, 5, -10 - i * distance);
+                scene.add(fixture);
+                
+                // Add light
+                const light = new THREE.PointLight(0xffffcc, 1, 15);
+                light.position.set(side * 8, 4.9, -10 - i * distance);
+                scene.add(light);
+                
+                // Add light glow effect
+                const glowGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffffcc,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                glow.position.set(side * 8, 4.8, -10 - i * distance);
+                scene.add(glow);
+            }
         }
 
         // Create environment (road, sky, etc.)
@@ -184,6 +256,9 @@
             
             // Add surrounding environment (buildings, etc)
             createSurroundings();
+            
+            // Add some decorative elements
+            addDecorations();
         }
 
         // Add road lane markings
@@ -214,6 +289,18 @@
             rightLine.position.y = 0.01;
             rightLine.position.z = -10;
             scene.add(rightLine);
+            
+            // Add dashed lines
+            for (let i = 0; i < 25; i++) {
+                const dashGeometry = new THREE.PlaneGeometry(0.2, 1);
+                const dashMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                
+                const dash = new THREE.Mesh(dashGeometry, dashMaterial);
+                dash.rotation.x = -Math.PI / 2;
+                dash.position.y = 0.01;
+                dash.position.z = -10 - i * 2;
+                scene.add(dash);
+            }
         }
 
         // Create surrounding environment elements
@@ -226,6 +313,9 @@
             });
             const sky = new THREE.Mesh(skyGeometry, skyMaterial);
             scene.add(sky);
+            
+            // Add stars
+            addStars();
             
             // Ground beside road
             const groundGeometry = new THREE.PlaneGeometry(100, 100);
@@ -242,6 +332,38 @@
             
             // Add distant buildings
             addBuildings();
+        }
+
+        // Add stars to the sky
+        function addStars() {
+            const starCount = 200;
+            const starGeometry = new THREE.BufferGeometry();
+            const starPositions = [];
+            
+            for (let i = 0; i < starCount; i++) {
+                const radius = 90;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                const x = radius * Math.sin(phi) * Math.cos(theta);
+                const y = radius * Math.sin(phi) * Math.sin(theta);
+                const z = radius * Math.cos(phi);
+                
+                starPositions.push(x, y, z);
+            }
+            
+            starGeometry.setAttribute(
+                'position',
+                new THREE.Float32BufferAttribute(starPositions, 3)
+            );
+            
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.5
+            });
+            
+            const stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
         }
 
         // Add buildings to the scene
@@ -302,416 +424,879 @@
             }
         }
 
+        // Add decorative elements to the scene
+        function addDecorations() {
+            // Add some billboards
+            addBillboards();
+            
+            // Add some guardrails along the road
+            addGuardrails();
+        }
+
+        // Add billboards to the scene
+        function addBillboards() {
+            const billboardCount = 4;
+            const billboardTexts = [
+                "DRIFT KINGS",
+                "JDM CLASSICS",
+                "TOKYO NIGHTS",
+                "MIDNIGHT CLUB"
+            ];
+            
+            for (let i = 0; i < billboardCount; i++) {
+                const side = i % 2 === 0 ? 1 : -1;
+                
+                // Billboard structure
+                const postGeometry = new THREE.BoxGeometry(0.5, 5, 0.5);
+                const postMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x555555,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                
+                const post = new THREE.Mesh(postGeometry, postMaterial);
+                post.position.set(side * 12, 2.5, -20 - i * 15);
+                scene.add(post);
+                
+                // Billboard sign
+                const signGeometry = new THREE.BoxGeometry(5, 3, 0.2);
+                const signMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x000000,
+                    roughness: 0.5,
+                    metalness: 0.5
+                });
+                
+                const sign = new THREE.Mesh(signGeometry, signMaterial);
+                sign.position.set(side * 12, 5, -20 - i * 15);
+                scene.add(sign);
+                
+                // Add text (simulation)
+                const textColor = Math.random() > 0.5 ? 0xff6600 : 0x00ccff;
+                const textGeometry = new THREE.PlaneGeometry(4.5, 0.6);
+                const textMaterial = new THREE.MeshBasicMaterial({
+                    color: textColor,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                
+                const text = new THREE.Mesh(textGeometry, textMaterial);
+                text.position.set(side * 12, 5, -19.9 - i * 15);
+                scene.add(text);
+            }
+        }
+
+        // Add guardrails to the scene
+        function addGuardrails() {
+            const railCount = 20;
+            const railLength = 2.5;
+            
+            const railMaterial = new THREE.MeshStandardMaterial({
+                color: 0x888888,
+                roughness: 0.6,
+                metalness: 0.4
+            });
+            
+            for (let i = 0; i < railCount; i++) {
+                // Left guardrail
+                const leftRailGeometry = new THREE.BoxGeometry(0.1, 0.5, railLength);
+                const leftRail = new THREE.Mesh(leftRailGeometry, railMaterial);
+                leftRail.position.set(-5.5, 0.5, -10 - i * railLength);
+                scene.add(leftRail);
+                
+                // Left posts
+                const leftPostGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1, 8);
+                const leftPost1 = new THREE.Mesh(leftPostGeometry, railMaterial);
+                leftPost1.position.set(-5.5, 0.5, -10 - i * railLength - railLength * 0.25);
+                scene.add(leftPost1);
+                
+                const leftPost2 = new THREE.Mesh(leftPostGeometry, railMaterial);
+                leftPost2.position.set(-5.5, 0.5, -10 - i * railLength - railLength * 0.75);
+                scene.add(leftPost2);
+                
+                // Right guardrail
+                const rightRailGeometry = new THREE.BoxGeometry(0.1, 0.5, railLength);
+                const rightRail = new THREE.Mesh(rightRailGeometry, railMaterial);
+                rightRail.position.set(5.5, 0.5, -10 - i * railLength);
+                scene.add(rightRail);
+                
+                // Right posts
+                const rightPostGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1, 8);
+                const rightPost1 = new THREE.Mesh(rightPostGeometry, railMaterial);
+                rightPost1.position.set(5.5, 0.5, -10 - i * railLength - railLength * 0.25);
+                scene.add(rightPost1);
+                
+                const rightPost2 = new THREE.Mesh(rightPostGeometry, railMaterial);
+                rightPost2.position.set(5.5, 0.5, -10 - i * railLength - railLength * 0.75);
+                scene.add(rightPost2);
+            }
+        }
+
         // Create car models
         function createCars() {
-            // Create simple car geometries (in a real project, you'd load 3D models)
-            // We're using simple shapes as placeholders for the 3D models
+            // Honda NSX (1995) - Red
+            const hondaNSX = createHondaNSX();
+            hondaNSX.position.y = 0.5;
+            hondaNSX.visible = true;
+            scene.add(hondaNSX);
+            cars.push(hondaNSX);
             
-            // First car - Sports Car (red)
-            const car1 = createSimpleCar(0xff0000);
-            car1.position.y = 0.5;
-            car1.visible = true;
-            scene.add(car1);
-            cars.push(car1);
+            // Mazda RX-7 (1999) - Yellow
+            const mazdaRX7 = createMazdaRX7();
+            mazdaRX7.position.y = 0.5;
+            mazdaRX7.position.z = 15; // Start off-screen
+            mazdaRX7.visible = true;
+            scene.add(mazdaRX7);
+            cars.push(mazdaRX7);
             
-            // Second car - SUV (blue)
-            const car2 = createSimpleSUV(0x0066ff);
-            car2.position.y = 0.7;
-            car2.position.z = 15; // Start off-screen
-            car2.visible = true;
-            scene.add(car2);
-            cars.push(car2);
-            
-            // Third car - Muscle Car (green)
-            const car3 = createMuscleCar(0x00cc44);
-            car3.position.y = 0.5;
-            car3.position.z = 15; // Start off-screen
-            car3.visible = true;
-            scene.add(car3);
-            cars.push(car3);
+            // Toyota Supra MK3 (1990) - White
+            const toyotaSupra = createToyotaSupra();
+            toyotaSupra.position.y = 0.5;
+            toyotaSupra.position.z = 15; // Start off-screen
+            toyotaSupra.visible = true;
+            scene.add(toyotaSupra);
+            cars.push(toyotaSupra);
             
             // Update car info display
             updateCarInfo();
         }
 
-        // Create a simple sports car shape
-        function createSimpleCar(color) {
+        // Create Honda NSX (1995)
+        function createHondaNSX() {
             const car = new THREE.Group();
             
-            // Car body
-            const bodyGeometry = new THREE.BoxGeometry(2, 0.5, 4);
+            // Basic material with metallic red finish
             const bodyMaterial = new THREE.MeshStandardMaterial({
-                color: color,
-                roughness: 0.2,
-                metalness: 0.8
+                color: 0xff0000,
+                roughness: 0.1,
+                metalness: 0.9
             });
+            
+            // Main body - low and wide
+            const bodyGeometry = new THREE.BoxGeometry(2, 0.4, 4.4);
             const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
             body.position.y = 0.5;
             body.castShadow = true;
             car.add(body);
             
-            // Car top
-            const topGeometry = new THREE.BoxGeometry(1.8, 0.4, 2);
-            const topMaterial = new THREE.MeshStandardMaterial({
-                color: color,
-                roughness: 0.2,
-                metalness: 0.8
-            });
-            const top = new THREE.Mesh(topGeometry, topMaterial);
-            top.position.y = 0.9;
-            top.position.z = -0.5;
-            top.castShadow = true;
-            car.add(top);
+            // Front hood (sloped)
+            const hoodGeometry = new THREE.BoxGeometry(1.9, 0.1, 1.4);
+            const hood = new THREE.Mesh(hoodGeometry, bodyMaterial);
+            hood.position.y = 0.7;
+            hood.position.z = 1.5;
+            hood.rotation.x = -0.1;
+            hood.castShadow = true;
+            car.add(hood);
             
-            // Car windows
+            // Cabin/cockpit (mid position, characteristic NSX shape)
+            const cabinGeometry = new THREE.BoxGeometry(1.8, 0.5, 2);
+            const cabin = new THREE.Mesh(cabinGeometry, bodyMaterial);
+            cabin.position.y = 0.8;
+            cabin.position.z = -0.2;
+            cabin.castShadow = true;
+            car.add(cabin);
+            
+            // Engine cover (behind cabin, NSX has mid-engine)
+            const engineCoverGeometry = new THREE.BoxGeometry(1.9, 0.1, 1);
+            const engineCover = new THREE.Mesh(engineCoverGeometry, bodyMaterial);
+            engineCover.position.y = 0.75;
+            engineCover.position.z = -1.7;
+            engineCover.castShadow = true;
+            car.add(engineCover);
+            
+            // Windows (black)
             const windowMaterial = new THREE.MeshStandardMaterial({
                 color: 0x111111,
                 roughness: 0.1,
                 metalness: 0.9
             });
             
-            // Windshield
-            const windshieldGeometry = new THREE.PlaneGeometry(1.7, 0.5);
+            // Windshield (NSX has distinctive sloped windshield)
+            const windshieldGeometry = new THREE.PlaneGeometry(1.7, 0.9);
             const windshield = new THREE.Mesh(windshieldGeometry, windowMaterial);
-            windshield.position.y = 0.7;
+            windshield.position.y = 1;
             windshield.position.z = 0.5;
-            windshield.rotation.x = Math.PI / 2.5;
+            windshield.rotation.x = Math.PI / 2.8;
             car.add(windshield);
             
-            // Wheels
-            addWheels(car);
+            // Side windows
+            const sideWindowGeometry = new THREE.PlaneGeometry(0.9, 0.5);
             
-            // Headlights
-            addHeadlights(car);
+            // Left side window
+            const leftWindow = new THREE.Mesh(sideWindowGeometry, windowMaterial);
+            leftWindow.position.set(-0.91, 1, -0.2);
+            leftWindow.rotation.y = Math.PI / 2;
+            car.add(leftWindow);
             
-            return car;
-        }
-
-        // Create a simple SUV shape
-        function createSimpleSUV(color) {
-            const car = new THREE.Group();
+            // Right side window
+            const rightWindow = new THREE.Mesh(sideWindowGeometry, windowMaterial);
+            rightWindow.position.set(0.91, 1, -0.2);
+            rightWindow.rotation.y = -Math.PI / 2;
+            car.add(rightWindow);
             
-            // Car body
-            const bodyGeometry = new THREE.BoxGeometry(2.2, 1.2, 5);
-            const bodyMaterial = new THREE.MeshStandardMaterial({
-                color: color,
+            // Rear window
+            const rearWindowGeometry = new THREE.PlaneGeometry(1.7, 0.6);
+            const rearWindow = new THREE.Mesh(rearWindowGeometry, windowMaterial);
+            rearWindow.position.y = 1;
+            rearWindow.position.z = -1;
+            rearWindow.rotation.x = -Math.PI / 3;
+            car.add(rearWindow);
+            
+            // Front bumper with air intakes
+            const frontBumperGeometry = new THREE.BoxGeometry(2, 0.3, 0.3);
+            const bumperMaterial = new THREE.MeshStandardMaterial({
+                color: 0xdddddd,
+                roughness: 0.5,
+                metalness: 0.5
+            });
+            const frontBumper = new THREE.Mesh(frontBumperGeometry, bumperMaterial);
+            frontBumper.position.y = 0.3;
+            frontBumper.position.z = 2.15;
+            car.add(frontBumper);
+            
+            // NSX has pop-up headlights 
+            const headlightGeometry = new THREE.BoxGeometry(0.6, 0.1, 0.2);
+            const headlightMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
                 roughness: 0.3,
                 metalness: 0.7
             });
-            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            body.position.y = 0.7;
-            body.castShadow = true;
-            car.add(body);
             
-            // Car windows
-            const windowMaterial = new THREE.MeshStandardMaterial({
-                color: 0x111111,
-                roughness: 0.1,
-                metalness: 0.9
+            // Left pop-up headlight
+            const leftHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+            leftHeadlight.position.set(-0.7, 0.7, 2.1);
+            car.add(leftHeadlight);
+            
+            // Right pop-up headlight
+            const rightHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+            rightHeadlight.position.set(0.7, 0.7, 2.1);
+            car.add(rightHeadlight);
+            
+            // Add headlight glass cover
+            const headlightGlassGeometry = new THREE.PlaneGeometry(0.5, 0.1);
+            const headlightGlassMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffcc,
+                transparent: true,
+                opacity: 0.8
             });
             
-            // Windshield
-            const windshieldGeometry = new THREE.PlaneGeometry(1.9, 0.8);
-            const windshield = new THREE.Mesh(windshieldGeometry, windowMaterial);
-            windshield.position.y = 0.9;
-            windshield.position.z = 1.2;
-            windshield.rotation.x = Math.PI / 2.2;
-            car.add(windshield);
+            const leftHeadlightGlass = new THREE.Mesh(headlightGlassGeometry, headlightGlassMaterial);
+            leftHeadlightGlass.position.set(-0.7, 0.7, 2.21);
+            car.add(leftHeadlightGlass);
             
-            // Wheels (bigger for SUV)
-            addWheels(car, 0.6, 0.3);
+            const rightHeadlightGlass = new THREE.Mesh(headlightGlassGeometry, headlightGlassMaterial);
+            rightHeadlightGlass.position.set(0.7, 0.7, 2.21);
+            car.add(rightHeadlightGlass);
             
-            // Headlights
-            addHeadlights(car);
-            
-            // Roof Rack
-            const rackGeometry = new THREE.BoxGeometry(2, 0.1, 3);
-            const rackMaterial = new THREE.MeshStandardMaterial({
-                color: 0x333333,
-                roughness: 0.5,
-                metalness: 0.5
-            });
-            const rack = new THREE.Mesh(rackGeometry, rackMaterial);
-            rack.position.y = 1.4;
-            rack.castShadow = true;
-            car.add(rack);
-            
-            return car;
-        }
-
-        // Create a simple muscle car shape
-        function createMuscleCar(color) {
-            const car = new THREE.Group();
-            
-            // Car body
-            const bodyGeometry = new THREE.BoxGeometry(2.2, 0.6, 5);
-            const bodyMaterial = new THREE.MeshStandardMaterial({
-                color: color,
-                roughness: 0.2,
-                metalness: 0.8
-            });
-            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            body.position.y = 0.5;
-            body.castShadow = true;
-            car.add(body);
-            
-            // Car top
-            const topGeometry = new THREE.BoxGeometry(2, 0.5, 2.5);
-            const topMaterial = new THREE.MeshStandardMaterial({
-                color: color,
-                roughness: 0.2,
-                metalness: 0.8
-            });
-            const top = new THREE.Mesh(topGeometry, topMaterial);
-            top.position.y = 0.8;
-            top.position.z = -0.5;
-            top.castShadow = true;
-            car.add(top);
-            
-            // Hood scoop
-            const scoopGeometry = new THREE.BoxGeometry(0.8, 0.2, 0.8);
-            const scoopMaterial = new THREE.MeshStandardMaterial({
-                color: 0x111111,
-                roughness: 0.5,
-                metalness: 0.5
-            });
-            const scoop = new THREE.Mesh(scoopGeometry, scoopMaterial);
-            scoop.position.y = 0.7;
-            scoop.position.z = 1.2;
-            car.add(scoop);
-            
-            // Car windows
-            const windowMaterial = new THREE.MeshStandardMaterial({
-                color: 0x111111,
-                roughness: 0.1,
-                metalness: 0.9
+            // Rear taillights (NSX has distinctive horizontal taillights)
+            const taillightGeometry = new THREE.BoxGeometry(1.8, 0.2, 0.1);
+            const taillightMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff0000,
+                emissive: 0xff0000,
+                emissiveIntensity: 0.5
             });
             
-            // Windshield
-            const windshieldGeometry = new THREE.PlaneGeometry(1.7, 0.5);
-            const windshield = new THREE.Mesh(windshieldGeometry, windowMaterial);
-            windshield.position.y = 0.7;
-            windshield.position.z = 0.5;
-            windshield.rotation.x = Math.PI / 2.5;
-            car.add(windshield);
+            const taillight = new THREE.Mesh(taillightGeometry, taillightMaterial);
+            taillight.position.y = 0.7;
+            taillight.position.z = -2.2;
+            car.add(taillight);
             
-            // Wheels
-            addWheels(car, 0.55, 0.35);
-            
-            // Headlights
-            addHeadlights(car);
-            
-            // Spoiler
-            const spoilerStandGeometry = new THREE.BoxGeometry(1.8, 0.3, 0.1);
+            // Add spoiler (optional on NSX)
+            const spoilerStandGeometry = new THREE.BoxGeometry(1.2, 0.1, 0.2);
             const spoilerMaterial = new THREE.MeshStandardMaterial({
                 color: 0x111111,
                 roughness: 0.5,
                 metalness: 0.5
             });
-            const spoilerStand = new THREE.Mesh(spoilerStandGeometry, spoilerMaterial);
-            spoilerStand.position.y = 0.8;
-            spoilerStand.position.z = -2.4;
-            car.add(spoilerStand);
             
-            const spoilerTopGeometry = new THREE.BoxGeometry(2, 0.1, 0.4);
-            const spoilerTop = new THREE.Mesh(spoilerTopGeometry, spoilerMaterial);
-            spoilerTop.position.y = 1;
-            spoilerTop.position.z = -2.4;
-            car.add(spoilerTop);
+            // Spoiler stands
+            const leftSpoilerStand = new THREE.Mesh(spoilerStandGeometry, spoilerMaterial);
+            leftSpoilerStand.position.set(-0.3, 0.8, -2.1);
+            car.add(leftSpoilerStand);
+            
+            const rightSpoilerStand = new THREE.Mesh(spoilerStandGeometry, spoilerMaterial);
+            rightSpoilerStand.position.set(0.3, 0.8, -2.1);
+            car.add(rightSpoilerStand);
+// Spoiler wing
+            const spoilerWingGeometry = new THREE.BoxGeometry(1.8, 0.05, 0.5);
+            const spoilerWing = new THREE.Mesh(spoilerWingGeometry, spoilerMaterial);
+            spoilerWing.position.set(0, 1.1, -2.1);
+            car.add(spoilerWing);
+            
+            // Wheels (NSX has wider rear wheels)
+            const wheelMaterial = new THREE.MeshStandardMaterial({
+                color: 0x111111,
+                roughness: 0.8,
+                metalness: 0.3
+            });
+            
+            // Front wheels (slightly smaller)
+            const frontWheelGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 16);
+            
+            // Front left wheel
+            const frontLeftWheel = new THREE.Mesh(frontWheelGeometry, wheelMaterial);
+            frontLeftWheel.position.set(-1, 0.35, 1.5);
+            frontLeftWheel.rotation.z = Math.PI / 2;
+            car.add(frontLeftWheel);
+            
+            // Front right wheel
+            const frontRightWheel = new THREE.Mesh(frontWheelGeometry, wheelMaterial);
+            frontRightWheel.position.set(1, 0.35, 1.5);
+            frontRightWheel.rotation.z = Math.PI / 2;
+            car.add(frontRightWheel);
+            
+            // Rear wheels (wider, characteristic of NSX)
+            const rearWheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+            
+            // Rear left wheel
+            const rearLeftWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
+            rearLeftWheel.position.set(-1, 0.4, -1.5);
+            rearLeftWheel.rotation.z = Math.PI / 2;
+            car.add(rearLeftWheel);
+            
+            // Rear right wheel
+            const rearRightWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
+            rearRightWheel.position.set(1, 0.4, -1.5);
+            rearRightWheel.rotation.z = Math.PI / 2;
+            car.add(rearRightWheel);
             
             return car;
         }
 
-        // Add wheels to a car model
-        function addWheels(car, radius = 0.5, width = 0.2) {
-            const wheelGeometry = new THREE.CylinderGeometry(radius, radius, width, 16);
+        // Create Mazda RX-7 (1999)
+        function createMazdaRX7() {
+            const car = new THREE.Group();
+            
+            // Yellow body color - iconic for RX-7
+            const bodyMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffcc00, 
+                roughness: 0.1,
+                metalness: 0.9
+            });
+            
+            // Main body - sleek and curved
+            const bodyGeometry = new THREE.BoxGeometry(2, 0.5, 4.5);
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.5;
+            body.castShadow = true;
+            car.add(body);
+            
+            // Front hood - more sloped for the RX-7 styling
+            const hoodGeometry = new THREE.BoxGeometry(1.9, 0.2, 1.6);
+            const hood = new THREE.Mesh(hoodGeometry, bodyMaterial);
+            hood.position.y = 0.65;
+            hood.position.z = 1.5;
+            hood.rotation.x = -0.12;
+            hood.castShadow = true;
+            car.add(hood);
+            
+            // Cabin/cockpit (distinctive RX-7 bubble-like canopy)
+            const cabinGeometry = new THREE.BoxGeometry(1.7, 0.6, 1.8);
+            const cabin = new THREE.Mesh(cabinGeometry, bodyMaterial);
+            cabin.position.y = 0.9;
+            cabin.position.z = 0;
+            cabin.castShadow = true;
+            car.add(cabin);
+            
+            // Back section - sloped for the RX-7 fastback style
+            const backGeometry = new THREE.BoxGeometry(1.9, 0.4, 1.5);
+            const back = new THREE.Mesh(backGeometry, bodyMaterial);
+            back.position.y = 0.7;
+            back.position.z = -1.5;
+            back.rotation.x = 0.1;
+            back.castShadow = true;
+            car.add(back);
+            
+            // Windows (black)
+            const windowMaterial = new THREE.MeshStandardMaterial({
+                color: 0x111111,
+                roughness: 0.1,
+                metalness: 0.9
+            });
+            
+            // Windshield (RX-7 has distinctive curved windshield)
+            const windshieldGeometry = new THREE.PlaneGeometry(1.6, 0.8);
+            const windshield = new THREE.Mesh(windshieldGeometry, windowMaterial);
+            windshield.position.y = 1.1;
+            windshield.position.z = 0.6;
+            windshield.rotation.x = Math.PI / 2.5;
+            car.add(windshield);
+            
+            // Side windows
+            const sideWindowGeometry = new THREE.PlaneGeometry(1.0, 0.5);
+            
+            // Left side window
+            const leftWindow = new THREE.Mesh(sideWindowGeometry, windowMaterial);
+            leftWindow.position.set(-0.86, 1.1, 0);
+            leftWindow.rotation.y = Math.PI / 2;
+            car.add(leftWindow);
+            
+            // Right side window
+            const rightWindow = new THREE.Mesh(sideWindowGeometry, windowMaterial);
+            rightWindow.position.set(0.86, 1.1, 0);
+            rightWindow.rotation.y = -Math.PI / 2;
+            car.add(rightWindow);
+            
+            // Rear window (distinctive wraparound glass on RX-7)
+            const rearWindowGeometry = new THREE.PlaneGeometry(1.6, 0.7);
+            const rearWindow = new THREE.Mesh(rearWindowGeometry, windowMaterial);
+            rearWindow.position.y = 1.1;
+            rearWindow.position.z = -0.9;
+            rearWindow.rotation.x = -Math.PI / 2.5;
+            car.add(rearWindow);
+            
+            // Front bumper
+            const frontBumperGeometry = new THREE.BoxGeometry(2, 0.3, 0.3);
+            const bumperMaterial = new THREE.MeshStandardMaterial({
+                color: 0x333333,
+                roughness: 0.5,
+                metalness: 0.5
+            });
+            const frontBumper = new THREE.Mesh(frontBumperGeometry, bumperMaterial);
+            frontBumper.position.y = 0.3;
+            frontBumper.position.z = 2.2;
+            car.add(frontBumper);
+            
+            // RX-7 has distinctive pop-up headlights
+            const headlightGeometry = new THREE.BoxGeometry(0.5, 0.1, 0.2);
+            const headlightMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                roughness: 0.3,
+                metalness: 0.7
+            });
+            
+            // Left pop-up headlight
+            const leftHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+            leftHeadlight.position.set(-0.7, 0.7, 2.1);
+            car.add(leftHeadlight);
+            
+            // Right pop-up headlight
+            const rightHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+            rightHeadlight.position.set(0.7, 0.7, 2.1);
+            car.add(rightHeadlight);
+            
+            // Add headlight glass
+            const headlightGlassGeometry = new THREE.PlaneGeometry(0.4, 0.1);
+            const headlightGlassMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffcc,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const leftHeadlightGlass = new THREE.Mesh(headlightGlassGeometry, headlightGlassMaterial);
+            leftHeadlightGlass.position.set(-0.7, 0.7, 2.21);
+            car.add(leftHeadlightGlass);
+            
+            const rightHeadlightGlass = new THREE.Mesh(headlightGlassGeometry, headlightGlassMaterial);
+            rightHeadlightGlass.position.set(0.7, 0.7, 2.21);
+            car.add(rightHeadlightGlass);
+            
+            // Rear taillights (RX-7 has round taillights)
+            const taillightGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.05, 16);
+            const taillightMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff0000,
+                emissive: 0xff0000,
+                emissiveIntensity: 0.5
+            });
+            
+            // Left taillight
+            const leftTaillight = new THREE.Mesh(taillightGeometry, taillightMaterial);
+            leftTaillight.position.set(-0.5, 0.7, -2.2);
+            leftTaillight.rotation.x = Math.PI / 2;
+            car.add(leftTaillight);
+            
+            // Right taillight
+            const rightTaillight = new THREE.Mesh(taillightGeometry, taillightMaterial);
+            rightTaillight.position.set(0.5, 0.7, -2.2);
+            rightTaillight.rotation.x = Math.PI / 2;
+            car.add(rightTaillight);
+            
+            // Add spoiler (RX-7 has a large rear wing)
+            const spoilerStandGeometry = new THREE.BoxGeometry(0.1, 0.3, 0.1);
+            const spoilerMaterial = new THREE.MeshStandardMaterial({
+                color: 0x333333,
+                roughness: 0.5,
+                metalness: 0.5
+            });
+            
+            // Spoiler stands
+            const leftSpoilerStand = new THREE.Mesh(spoilerStandGeometry, spoilerMaterial);
+            leftSpoilerStand.position.set(-0.7, 0.9, -2.1);
+            car.add(leftSpoilerStand);
+            
+            const rightSpoilerStand = new THREE.Mesh(spoilerStandGeometry, spoilerMaterial);
+            rightSpoilerStand.position.set(0.7, 0.9, -2.1);
+            car.add(rightSpoilerStand);
+            
+            // Spoiler wing
+            const spoilerWingGeometry = new THREE.BoxGeometry(1.8, 0.05, 0.4);
+            const spoilerWing = new THREE.Mesh(spoilerWingGeometry, spoilerMaterial);
+            spoilerWing.position.set(0, 1.2, -2.1);
+            car.add(spoilerWing);
+            
+            // Wheels
             const wheelMaterial = new THREE.MeshStandardMaterial({
+                color: 0x111111,
+                roughness: 0.8,
+                metalness: 0.3
+            });
+            
+            // Front wheels
+            const frontWheelGeometry = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 16);
+            
+            // Front left wheel
+            const frontLeftWheel = new THREE.Mesh(frontWheelGeometry, wheelMaterial);
+            frontLeftWheel.position.set(-1, 0.35, 1.5);
+            frontLeftWheel.rotation.z = Math.PI / 2;
+            car.add(frontLeftWheel);
+            
+            // Front right wheel
+            const frontRightWheel = new THREE.Mesh(frontWheelGeometry, wheelMaterial);
+            frontRightWheel.position.set(1, 0.35, 1.5);
+            frontRightWheel.rotation.z = Math.PI / 2;
+            car.add(frontRightWheel);
+            
+            // Rear wheels
+            const rearWheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+            
+            // Rear left wheel
+            const rearLeftWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
+            rearLeftWheel.position.set(-1, 0.4, -1.5);
+            rearLeftWheel.rotation.z = Math.PI / 2;
+            car.add(rearLeftWheel);
+            
+            // Rear right wheel
+            const rearRightWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
+            rearRightWheel.position.set(1, 0.4, -1.5);
+            rearRightWheel.rotation.z = Math.PI / 2;
+            car.add(rearRightWheel);
+            
+            return car;
+        }
+
+        // Create Toyota Supra MK3 (1990)
+        function createToyotaSupra() {
+            const car = new THREE.Group();
+            
+            // White body color
+            const bodyMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                roughness: 0.1,
+                metalness: 0.9
+            });
+            
+            // Main body - wider and more substantial than the others
+            const bodyGeometry = new THREE.BoxGeometry(2.1, 0.55, 4.7);
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.5;
+            body.castShadow = true;
+            car.add(body);
+            
+            // Front hood - more angular for the MK3 Supra
+            const hoodGeometry = new THREE.BoxGeometry(2, 0.2, 1.7);
+            const hood = new THREE.Mesh(hoodGeometry, bodyMaterial);
+            hood.position.y = 0.7;
+            hood.position.z = 1.5;
+            hood.rotation.x = -0.08;
+            hood.castShadow = true;
+            car.add(hood);
+            
+            // Cabin/cockpit (characteristic boxier MK3 shape)
+            const cabinGeometry = new THREE.BoxGeometry(1.9, 0.7, 2);
+            const cabin = new THREE.Mesh(cabinGeometry, bodyMaterial);
+            cabin.position.y = 0.95;
+            cabin.position.z = 0;
+            cabin.castShadow = true;
+            car.add(cabin);
+            
+            // Back section - boxier for the MK3 style
+            const backGeometry = new THREE.BoxGeometry(2, 0.45, 1.2);
+            const back = new THREE.Mesh(backGeometry, bodyMaterial);
+            back.position.y = 0.65;
+            back.position.z = -1.7;
+            back.castShadow = true;
+            car.add(back);
+            
+            // Windows (black)
+            const windowMaterial = new THREE.MeshStandardMaterial({
+                color: 0x111111,
+                roughness: 0.1,
+                metalness: 0.9
+            });
+            
+            // Windshield (MK3 Supra has a more upright windshield)
+            const windshieldGeometry = new THREE.PlaneGeometry(1.8, 0.9);
+            const windshield = new THREE.Mesh(windshieldGeometry, windowMaterial);
+            windshield.position.y = 1.2;
+            windshield.position.z = 0.8;
+            windshield.rotation.x = Math.PI / 2.2;
+            car.add(windshield);
+            
+            // Side windows
+            const sideWindowGeometry = new THREE.PlaneGeometry(1.2, 0.5);
+            
+            // Left side window
+            const leftWindow = new THREE.Mesh(sideWindowGeometry, windowMaterial);
+            leftWindow.position.set(-1.06, 1.1, 0);
+            leftWindow.rotation.y = Math.PI / 2;
+            car.add(leftWindow);
+            
+            // Right side window
+            const rightWindow = new THREE.Mesh(sideWindowGeometry, windowMaterial);
+            rightWindow.position.set(1.06, 1.1, 0);
+            rightWindow.rotation.y = -Math.PI / 2;
+            car.add(rightWindow);
+            
+            // Rear window
+            const rearWindowGeometry = new THREE.PlaneGeometry(1.7, 0.6);
+            const rearWindow = new THREE.Mesh(rearWindowGeometry, windowMaterial);
+            rearWindow.position.y = 1.2;
+            rearWindow.position.z = -1;
+            rearWindow.rotation.x = -Math.PI / 2.2;
+            car.add(rearWindow);
+            
+            // Front bumper (with characteristic MK3 Supra design)
+            const frontBumperGeometry = new THREE.BoxGeometry(2.1, 0.35, 0.35);
+            const bumperMaterial = new THREE.MeshStandardMaterial({
+                color: 0x222222,
+                roughness: 0.5,
+                metalness: 0.5
+            });
+            const frontBumper = new THREE.Mesh(frontBumperGeometry, bumperMaterial);
+            frontBumper.position.y = 0.3;
+            frontBumper.position.z = 2.3;
+            car.add(frontBumper);
+            
+            // MK3 Supra has flip-up headlights
+            const headlightGeometry = new THREE.BoxGeometry(0.7, 0.2, 0.1);
+            const headlightMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                roughness: 0.3,
+                metalness: 0.7
+            });
+            
+            // Left headlight
+            const leftHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+            leftHeadlight.position.set(-0.65, 0.6, 2.2);
+            car.add(leftHeadlight);
+            
+            // Right headlight
+            const rightHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+            rightHeadlight.position.set(0.65, 0.6, 2.2);
+            car.add(rightHeadlight);
+            
+            // Add headlight glass
+            const headlightGlassGeometry = new THREE.PlaneGeometry(0.6, 0.15);
+            const headlightGlassMaterial = new THREE.MeshBasicMaterial({
+                color: 0xffffcc,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const leftHeadlightGlass = new THREE.Mesh(headlightGlassGeometry, headlightGlassMaterial);
+            leftHeadlightGlass.position.set(-0.65, 0.6, 2.26);
+            car.add(leftHeadlightGlass);
+            
+            const rightHeadlightGlass = new THREE.Mesh(headlightGlassGeometry, headlightGlassMaterial);
+            rightHeadlightGlass.position.set(0.65, 0.6, 2.26);
+            car.add(rightHeadlightGlass);
+            
+            // Rear taillights (characteristic horizontal bar of the MK3)
+            const taillightGeometry = new THREE.BoxGeometry(2, 0.2, 0.1);
+            const taillightMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff0000,
+                emissive: 0xff0000,
+                emissiveIntensity: 0.5
+            });
+            
+            const taillight = new THREE.Mesh(taillightGeometry, taillightMaterial);
+            taillight.position.y = 0.7;
+            taillight.position.z = -2.3;
+            car.add(taillight);
+            
+            // Add spoiler (MK3 had optional spoiler)
+            const spoilerStandGeometry = new THREE.BoxGeometry(0.1, 0.3, 0.1);
+            const spoilerMaterial = new THREE.MeshStandardMaterial({
                 color: 0x222222,
                 roughness: 0.5,
                 metalness: 0.5
             });
             
+            // Spoiler stands
+            const leftSpoilerStand = new THREE.Mesh(spoilerStandGeometry, spoilerMaterial);
+            leftSpoilerStand.position.set(-0.8, 0.85, -2.2);
+            car.add(leftSpoilerStand);
+            
+            const rightSpoilerStand = new THREE.Mesh(spoilerStandGeometry, spoilerMaterial);
+            rightSpoilerStand.position.set(0.8, 0.85, -2.2);
+            car.add(rightSpoilerStand);
+            
+            // Spoiler wing
+            const spoilerWingGeometry = new THREE.BoxGeometry(1.9, 0.08, 0.5);
+            const spoilerWing = new THREE.Mesh(spoilerWingGeometry, spoilerMaterial);
+            spoilerWing.position.set(0, 1.1, -2.2);
+            car.add(spoilerWing);
+            
+            // Wheels
+            const wheelMaterial = new THREE.MeshStandardMaterial({
+                color: 0x111111,
+                roughness: 0.8,
+                metalness: 0.3
+            });
+            
+            // Front wheels
+            const frontWheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+            
             // Front left wheel
-            const wheel1 = new THREE.Mesh(wheelGeometry, wheelMaterial);
-            wheel1.position.set(-1.1, 0.5, 1.5);
-            wheel1.rotation.z = Math.PI / 2;
-            wheel1.castShadow = true;
-            car.add(wheel1);
+            const frontLeftWheel = new THREE.Mesh(frontWheelGeometry, wheelMaterial);
+            frontLeftWheel.position.set(-1.05, 0.4, 1.6);
+            frontLeftWheel.rotation.z = Math.PI / 2;
+            car.add(frontLeftWheel);
             
             // Front right wheel
-            const wheel2 = new THREE.Mesh(wheelGeometry, wheelMaterial);
-            wheel2.position.set(1.1, 0.5, 1.5);
-            wheel2.rotation.z = Math.PI / 2;
-            wheel2.castShadow = true;
-            car.add(wheel2);
+            const frontRightWheel = new THREE.Mesh(frontWheelGeometry, wheelMaterial);
+            frontRightWheel.position.set(1.05, 0.4, 1.6);
+            frontRightWheel.rotation.z = Math.PI / 2;
+            car.add(frontRightWheel);
+            
+            // Rear wheels
+            const rearWheelGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
             
             // Rear left wheel
-            const wheel3 = new THREE.Mesh(wheelGeometry, wheelMaterial);
-            wheel3.position.set(-1.1, 0.5, -1.5);
-            wheel3.rotation.z = Math.PI / 2;
-            wheel3.castShadow = true;
-            car.add(wheel3);
+            const rearLeftWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
+            rearLeftWheel.position.set(-1.05, 0.4, -1.6);
+            rearLeftWheel.rotation.z = Math.PI / 2;
+            car.add(rearLeftWheel);
             
             // Rear right wheel
-            const wheel4 = new THREE.Mesh(wheelGeometry, wheelMaterial);
-            wheel4.position.set(1.1, 0.5, -1.5);
-            wheel4.rotation.z = Math.PI / 2;
-            wheel4.castShadow = true;
-            car.add(wheel4);
+            const rearRightWheel = new THREE.Mesh(rearWheelGeometry, wheelMaterial);
+            rearRightWheel.position.set(1.05, 0.4, -1.6);
+            rearRightWheel.rotation.z = Math.PI / 2;
+            car.add(rearRightWheel);
             
-            // Create wheel caps (hubcaps)
-            const capGeometry = new THREE.CircleGeometry(radius * 0.6, 16);
-            const capMaterial = new THREE.MeshStandardMaterial({
-                color: 0xcccccc,
-                roughness: 0.2,
-                metalness: 0.8
-            });
-            
-            // Add caps to each wheel
-            const cap1 = new THREE.Mesh(capGeometry, capMaterial);
-            cap1.position.set(0, 0, width / 2 + 0.01);
-            wheel1.add(cap1);
-            
-            const cap2 = new THREE.Mesh(capGeometry, capMaterial);
-            cap2.position.set(0, 0, width / 2 + 0.01);
-            wheel2.add(cap2);
-            
-            const cap3 = new THREE.Mesh(capGeometry, capMaterial);
-            cap3.position.set(0, 0, width / 2 + 0.01);
-            wheel3.add(cap3);
-            
-            const cap4 = new THREE.Mesh(capGeometry, capMaterial);
-            cap4.position.set(0, 0, width / 2 + 0.01);
-            wheel4.add(cap4);
-        }
-
-        // Add headlights to a car
-        function addHeadlights(car) {
-            const headlightGeometry = new THREE.CircleGeometry(0.2, 16);
-            const headlightMaterial = new THREE.MeshBasicMaterial({
-                color: 0xffffcc,
-                emissive: 0xffffcc,
-                emissiveIntensity: 1
-            });
-            
-            // Left headlight
-            const headlight1 = new THREE.Mesh(headlightGeometry, headlightMaterial);
-            headlight1.position.set(-0.7, 0.5, 2.01); // Slightly in front of the car
-            car.add(headlight1);
-            
-            // Right headlight
-            const headlight2 = new THREE.Mesh(headlightGeometry, headlightMaterial);
-            headlight2.position.set(0.7, 0.5, 2.01); // Slightly in front of the car
-            car.add(headlight2);
-            
-            // Add headlight glow
-            const light1 = new THREE.PointLight(0xffffcc, 0.5, 10);
-            light1.position.set(-0.7, 0.5, 2.5);
-            car.add(light1);
-            
-            const light2 = new THREE.PointLight(0xffffcc, 0.5, 10);
-            light2.position.set(0.7, 0.5, 2.5);
-            car.add(light2);
-            
-            // Taillights
-            const taillightGeometry = new THREE.CircleGeometry(0.15, 16);
-            const taillightMaterial = new THREE.MeshBasicMaterial({
-                color: 0xff0000,
-                emissive: 0xff0000,
-                emissiveIntensity: 1
-            });
-            
-            // Left taillight
-            const taillight1 = new THREE.Mesh(taillightGeometry, taillightMaterial);
-            taillight1.position.set(-0.7, 0.5, -2.01); // Slightly behind the car
-            car.add(taillight1);
-            
-            // Right taillight
-            const taillight2 = new THREE.Mesh(taillightGeometry, taillightMaterial);
-            taillight2.position.set(0.7, 0.5, -2.01); // Slightly behind the car
-            car.add(taillight2);
+            return car;
         }
 
         // Update car info display
         function updateCarInfo() {
             document.getElementById('carName').textContent = carInfos[currentCarIndex].name;
             document.getElementById('carDescription').textContent = carInfos[currentCarIndex].description;
+            document.getElementById('carSpecs').textContent = carInfos[currentCarIndex].specs;
         }
 
-        // Switch to next car
+        // Next car button handler
         function nextCar() {
             if (animationInProgress) return;
             animationInProgress = true;
             
-            const currentCar = cars[currentCarIndex];
-            const nextIndex = (currentCarIndex + 1) % cars.length;
-            const nextCar = cars[nextIndex];
+            document.getElementById('loadingText').style.display = 'block';
             
-            // Start animation to drive current car off and bring in new car
-            animateCarTransition(currentCar, nextCar, 1, () => {
-                currentCarIndex = nextIndex;
-                updateCarInfo();
-                animationInProgress = false;
-            });
+            // Animate current car driving off the scene
+            let currentCar = cars[currentCarIndex];
+            let targetZ = -15;
+            let speed = 0.5;
+            
+            let animateCarOut = function() {
+                if (currentCar.position.z > targetZ) {
+                    currentCar.position.z -= speed;
+                    requestAnimationFrame(animateCarOut);
+                } else {
+                    // Update car index for next car
+                    currentCarIndex = (currentCarIndex + 1) % cars.length;
+                    
+                    // Reset position of current car off-screen for entrance
+                    currentCar.position.z = 15;
+                    
+                    // Get next car and position it off-screen for entrance
+                    let nextCar = cars[currentCarIndex];
+                    nextCar.position.z = 15;
+                    
+                    // Update car info
+                    updateCarInfo();
+                    
+                    // Animate next car driving in
+                    animateCarIn();
+                }
+            };
+            
+            let animateCarIn = function() {
+                let nextCar = cars[currentCarIndex];
+                let targetZ = 0;
+                
+                let animate = function() {
+                    if (nextCar.position.z > targetZ) {
+                        nextCar.position.z -= speed;
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Animation complete
+                        nextCar.position.z = 0;
+                        animationInProgress = false;
+                        document.getElementById('loadingText').style.display = 'none';
+                    }
+                };
+                
+                animate();
+            };
+            
+            // Start the animation sequence
+            animateCarOut();
         }
 
-        // Switch to previous car
+        // Previous car button handler
         function prevCar() {
             if (animationInProgress) return;
             animationInProgress = true;
             
-            const currentCar = cars[currentCarIndex];
-            const prevIndex = (currentCarIndex - 1 + cars.length) % cars.length;
-            const prevCar = cars[prevIndex];
+            document.getElementById('loadingText').style.display = 'block';
             
-            // Start animation to drive current car off and bring in new car
-            animateCarTransition(currentCar, prevCar, -1, () => {
-                currentCarIndex = prevIndex;
-                updateCarInfo();
-                animationInProgress = false;
-            });
-        }
-
-        // Animate car transition
-        function animateCarTransition(exitCar, enterCar, direction, callback) {
-            // Setup enter car initial position
-            enterCar.position.z = direction * 15; // Start off-screen in the appropriate direction
-            enterCar.position.x = 0;
+            // Animate current car driving off the scene (in reverse direction)
+            let currentCar = cars[currentCarIndex];
+            let targetZ = 15;
+            let speed = 0.5;
             
-            const duration = 2000; // Animation duration in milliseconds
-            const startTime = Date.now();
-            
-            function animate() {
-                const now = Date.now();
-                const elapsed = now - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                
-                // Move exit car off screen
-                exitCar.position.z -= direction * 0.2;
-                exitCar.position.x += Math.sin(progress * Math.PI) * direction * 0.1;
-                
-                // Move enter car onto screen
-                enterCar.position.z -= direction * 0.2;
-                enterCar.position.x -= Math.sin(progress * Math.PI) * direction * 0.1;
-                
-                // Add some rotation for style
-                exitCar.rotation.y = Math.sin(progress * Math.PI * 0.5) * direction * 0.1;
-                enterCar.rotation.y = -Math.sin(progress * Math.PI * 0.5) * direction * 0.1;
-                
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
+            let animateCarOut = function() {
+                if (currentCar.position.z < targetZ) {
+                    currentCar.position.z += speed;
+                    requestAnimationFrame(animateCarOut);
                 } else {
-                    // Reset positions for next time
-                    exitCar.position.z = -direction * 15; // Move completely off-screen
-                    enterCar.position.z = 0; // Center on screen
-                    enterCar.position.x = 0;
-                    enterCar.rotation.y = 0;
+                    // Update car index for previous car
+                    currentCarIndex = (currentCarIndex - 1 + cars.length) % cars.length;
                     
-                    if (callback) callback();
+                    // Reset position of current car off-screen for entrance
+                    currentCar.position.z = -15;
+                    
+                    // Get previous car and position it off-screen for entrance
+                    let prevCar = cars[currentCarIndex];
+                    prevCar.position.z = -15;
+                    
+                    // Update car info
+                    updateCarInfo();
+                    
+                    // Animate previous car driving in
+                    animateCarIn();
                 }
-            }
+            };
             
-            animate();
+            let animateCarIn = function() {
+                let prevCar = cars[currentCarIndex];
+                let targetZ = 0;
+                
+                let animate = function() {
+                    if (prevCar.position.z < targetZ) {
+                        prevCar.position.z += speed;
+                        requestAnimationFrame(animate);
+                    } else {
+                        // Animation complete
+                        prevCar.position.z = 0;
+                        animationInProgress = false;
+                        document.getElementById('loadingText').style.display = 'none';
+                    }
+                };
+                
+                animate();
+            };
+            
+            // Start the animation sequence
+            animateCarOut();
         }
 
         // Handle window resize
@@ -721,39 +1306,32 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // Animation loop
+        // Animate treadmill road effect and car rotation
         function animate() {
             requestAnimationFrame(animate);
             
-            // Animate road texture movement for treadmill effect
-            if (road.material) {
-                // Create treadmill effect by moving the road markings
-                const roadObjects = scene.children.filter(obj => 
-                    obj.geometry && obj.geometry.type === 'PlaneGeometry' && 
-                    obj.rotation.x === -Math.PI / 2 && 
-                    obj.position.y === 0.01
-                );
-                
-                roadObjects.forEach(marking => {
-                    marking.position.z = (marking.position.z + 0.1) % 10;
-                });
+            // Simulate road moving effect by shifting texture
+            if (road) {
+                // We could add road scrolling texture coordinates here
+                // But since we're using a simple material, we'll simulate by adding objects in the distance
             }
             
-            // Rotate car wheels
-            cars.forEach(car => {
-                car.children.forEach(child => {
-                    // Find wheel objects (cylinders)
-                    if (child.geometry && child.geometry.type === 'CylinderGeometry') {
-                        child.rotation.x += 0.1; // Rotate wheels
-                    }
-                });
-            });
+            // Rotate wheels for cars
+            for (let i = 0; i < cars.length; i++) {
+                if (i === currentCarIndex) {
+                    // Make car gently bob up and down for a "breathing" effect
+                    cars[i].position.y = 0.5 + Math.sin(Date.now() * 0.001) * 0.03;
+                    
+                    // Rotate the car slightly for showcase effect
+                    cars[i].rotation.y = Math.sin(Date.now() * 0.0005) * 0.1;
+                }
+            }
             
             renderer.render(scene, camera);
         }
 
-        // Initialize the scene on window load
-        window.onload = init;
+        // Initialize on window load
+        window.addEventListener('load', init);
     </script>
 </body>
 </html>
